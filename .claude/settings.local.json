@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(ls c:/Users/Shariorfarhan/Desktop/Prototypebd/backend/.env*)",
+      "Bash(ls c:/Users/Shariorfarhan/Desktop/Prototypebd/frontend/.env*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"from app.main import app; print\\(''Import OK''\\)\")",
+      "Bash(python seed.py)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(cmd.exe /c \"where node 2>&1\")",
+      "Bash(cmd.exe /c \"node --version 2>&1\")",
+      "Bash(cmd.exe /c \"npm --version 2>&1\")",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Users/Shariorfarhan/AppData/Roaming/**)",
+      "Bash(powershell.exe -Command \"node --version\")",
+      "Bash(powershell.exe -Command \"npm --version\")",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(npm --version)",
+      "Bash(python3:*)",
+      "Bash(find c:UsersShariorfarhanDesktopPrototypebd -name *router* -o -name main.py)"
+    ]
+  }
+}

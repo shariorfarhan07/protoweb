@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design Tokens ──────────────────────────────────────────────────────── */
+:root {
+  --bg: #f4f4f0;
+  --fg: #111;
+  --muted: #555;
+  --subtle: #888;
+  --lighter: #aaa;
+  --border: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 32px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.10);
+
+  /* Category gradient colours */
+  --blue-light: #ddeeff;
+  --blue-medium: #b8d8f8;
+  --peach-light: #ffe8d6;
+  --peach-medium: #ffd0b0;
+  --mint-light: #d6ffe8;
+  --mint-medium: #b0f0cc;
+  --lavender-light: #ead6ff;
+  --lavender-medium: #d4b0f5;
+
+  /* Shape */
+  --radius-card: 20px;
+  --radius-carousel: 24px;
+  --radius-pill: 100px;
+
+  /* Typography */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --navbar-h: 64px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-inter), Inter, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ── Utility: Pill button ───────────────────────────────────────────────── */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  background: var(--fg);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-pill:hover {
+  background: #333;
+  transform: translateY(-1px);
+}
+
+.btn-pill-outline {
+  background: transparent;
+  color: var(--fg);
+  border: 1.5px solid var(--fg);
+}
+
+.btn-pill-outline:hover {
+  background: var(--fg);
+  color: #fff;
+}
+
+/* ── Float animation (hero images) ─────────────────────────────────────── */
+@keyframes floatImg {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-14px); }
+}
+
+/* ── Skeleton pulse ─────────────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+}
