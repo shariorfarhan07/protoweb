@@ -5,6 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAdminInventory, deleteProduct } from "@/lib/api";
 import type { PaginatedResponse, ProductList } from "@/lib/api-types";
+import { buildImageUrl } from "@/lib/utils";
+
+const TH = "px-5 py-3 text-left font-medium uppercase tracking-widest whitespace-nowrap";
+const TD = "px-5 py-3.5 align-middle";
 
 export default function AdminProductsPage() {
   const [data, setData] = useState<PaginatedResponse<ProductList> | null>(null);
@@ -44,145 +48,173 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-10">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-semibold tracking-tight" style={{ color: "#111" }}>Products</h1>
+          <p style={{ color: "#aaa", fontSize: 13 }} className="mt-1">
             {data ? `${data.total} active products` : "Loading…"}
           </p>
         </div>
         <Link
           href="/admin/products/new"
-          className="rounded-lg bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 hover:bg-gray-700 transition"
+          className="text-sm font-medium rounded-lg px-4 py-2 transition"
+          style={{ background: "#111", color: "#fff" }}
         >
           + Add Product
         </Link>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="mb-5 rounded-xl px-4 py-3 text-sm"
+          style={{ background: "#fff1f1", color: "#c92a2a", border: "1px solid #ffd6d6" }}>
           {error}
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead style={{ borderBottom: "1px solid #f0f0f0" }}>
             <tr>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Product</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Type</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Category</th>
-              <th className="text-right px-4 py-3 font-semibold text-gray-600">Price</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Stock</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Featured</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Actions</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Product</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Type</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Category</th>
+              <th className={TH + " text-right"} style={{ fontSize: 10, color: "#bbb" }}>Price</th>
+              <th className={TH + " text-center"} style={{ fontSize: 10, color: "#bbb" }}>Stock</th>
+              <th className={TH + " text-center"} style={{ fontSize: 10, color: "#bbb" }}>Featured</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }} />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading &&
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-gray-100 rounded animate-pulse" />
-                    </td>
-                  ))}
-                </tr>
-              ))}
+          <tbody>
+            {loading && Array.from({ length: 6 }).map((_, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid #f7f7f7" }}>
+                {Array.from({ length: 7 }).map((_, j) => (
+                  <td key={j} className={TD}>
+                    <div className="h-3.5 rounded-full animate-pulse"
+                      style={{ background: "#f0f0f0", width: j === 0 ? "140px" : "60px" }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+
             {!loading && data?.items.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={7} className="px-5 py-16 text-center text-sm" style={{ color: "#bbb" }}>
                   No products found.{" "}
-                  <Link href="/admin/products/new" className="text-blue-600 hover:underline">
+                  <Link href="/admin/products/new" style={{ color: "#111", textDecoration: "underline" }}>
                     Add the first one.
                   </Link>
                 </td>
               </tr>
             )}
-            {!loading &&
-              data?.items.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {product.primary_image ? (
+
+            {!loading && data?.items.map((product) => (
+              <tr
+                key={product.id}
+                className="transition-colors"
+                style={{ borderBottom: "1px solid #f7f7f7" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#fafaf8")}
+                onMouseLeave={e => (e.currentTarget.style.background = "")}
+              >
+                <td className={TD}>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{ background: "#f5f5f5" }}
+                    >
+                      {product.primary_image && (
                         <Image
-                          src={product.primary_image}
+                          src={buildImageUrl(product.primary_image)}
                           alt={product.name}
                           width={40}
                           height={40}
-                          className="rounded-md object-cover bg-gray-100 shrink-0"
+                          className="object-contain w-full h-full p-1"
                         />
-                      ) : (
-                        <div className="w-10 h-10 rounded-md bg-gray-100 shrink-0" />
                       )}
-                      <div>
-                        <p className="font-medium text-gray-900 line-clamp-1">{product.name}</p>
-                        <p className="text-xs text-gray-400">{product.brand?.name ?? "—"}</p>
-                      </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 capitalize text-gray-600">{product.product_type}</td>
-                  <td className="px-4 py-3 text-gray-600">{product.category?.name ?? "—"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                    ৳{product.price.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`font-bold text-sm ${product.stock_qty <= 5 ? "text-red-600" : "text-gray-900"}`}>
-                      {product.stock_qty}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {product.is_featured ? (
-                      <span className="text-amber-500 text-base">★</span>
-                    ) : (
-                      <span className="text-gray-300 text-base">☆</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/products/${product.id}/edit`}
-                        className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(product.id, product.name)}
-                        disabled={deletingId === product.id}
-                        className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-40"
-                      >
-                        {deletingId === product.id ? "…" : "Remove"}
-                      </button>
+                    <div>
+                      <p className="font-medium line-clamp-1" style={{ color: "#111" }}>{product.name}</p>
+                      <p style={{ fontSize: 12, color: "#bbb" }}>{product.brand?.name ?? "—"}</p>
                     </div>
-                  </td>
-                </tr>
-              ))}
+                  </div>
+                </td>
+                <td className={TD + " capitalize"} style={{ color: "#777" }}>{product.product_type}</td>
+                <td className={TD} style={{ color: "#777" }}>{product.category?.name ?? "—"}</td>
+                <td className={TD + " text-right font-semibold"} style={{ color: "#111" }}>
+                  ৳{product.price.toLocaleString()}
+                </td>
+                <td className={TD + " text-center"}>
+                  <span
+                    className="font-semibold text-sm"
+                    style={{ color: product.stock_qty <= 5 ? "#e5484d" : "#111" }}
+                  >
+                    {product.stock_qty}
+                  </span>
+                </td>
+                <td className={TD + " text-center"}>
+                  {product.is_featured ? (
+                    <span style={{ color: "#f59e0b", fontSize: 16 }}>★</span>
+                  ) : (
+                    <span style={{ color: "#e0e0e0", fontSize: 16 }}>★</span>
+                  )}
+                </td>
+                <td className={TD}>
+                  <div className="flex items-center gap-2 justify-end">
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg transition"
+                      style={{ background: "#f5f5f5", color: "#333" }}
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(product.id, product.name)}
+                      disabled={deletingId === product.id}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg transition disabled:opacity-40"
+                      style={{ background: "#fff1f1", color: "#c92a2a" }}
+                    >
+                      {deletingId === product.id ? "…" : "Remove"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {data && data.total_pages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <p className="text-gray-500">Page {data.page} of {data.total_pages}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40 transition"
+      <Pagination data={data} page={page} setPage={setPage} />
+    </div>
+  );
+}
+
+function Pagination({
+  data, page, setPage,
+}: {
+  data: PaginatedResponse<unknown> | null;
+  page: number;
+  setPage: (fn: (p: number) => number) => void;
+}) {
+  if (!data || data.total_pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between mt-5">
+      <p style={{ fontSize: 12, color: "#aaa" }}>Page {data.page} of {data.total_pages}</p>
+      <div className="flex gap-2">
+        {(["Previous", "Next"] as const).map((label) => {
+          const disabled = label === "Previous" ? page <= 1 : page >= data.total_pages;
+          return (
+            <button key={label}
+              onClick={() => setPage((p) => label === "Previous" ? Math.max(1, p - 1) : Math.min(data.total_pages, p + 1))}
+              disabled={disabled}
+              className="text-xs rounded-lg px-3 py-1.5 transition font-medium disabled:opacity-30"
+              style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333" }}
             >
-              Previous
+              {label}
             </button>
-            <button
-              onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
-              disabled={page >= data.total_pages}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40 transition"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

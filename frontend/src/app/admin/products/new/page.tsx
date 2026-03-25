@@ -8,13 +8,35 @@ import type { BrandSchema, CategorySchema, ProductTypeSchema } from "@/lib/api-t
 import MultiImageUpload from "@/components/admin/MultiImageUpload";
 import SpecificationsEditor from "@/components/admin/SpecificationsEditor";
 
-// TipTap uses browser APIs — must be loaded client-side only
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
   ssr: false,
   loading: () => (
-    <div className="h-48 rounded-lg border border-gray-300 bg-gray-50 animate-pulse" />
+    <div className="h-48 rounded-xl animate-pulse" style={{ background: "#f5f5f5" }} />
   ),
 });
+
+// ── Shared form styles ────────────────────────────────────────────────────────
+const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm transition focus:outline-none";
+const inputStyle = { border: "1px solid #e0e0e0", color: "#111", background: "#fff" };
+const labelStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 500, color: "#777", marginBottom: 6, letterSpacing: "0.03em" };
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={labelStyle}>{label}{required && <span style={{ color: "#e5484d" }}> *</span>}</label>
+      {children}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl p-6 space-y-5" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#aaa" }}>{title}</h2>
+      {children}
+    </section>
+  );
+}
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -24,7 +46,6 @@ export default function NewProductPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form fields
   const [name, setName] = useState("");
   const [productType, setProductType] = useState("");
   const [price, setPrice] = useState("");
@@ -74,20 +95,14 @@ export default function NewProductPage() {
     setSaving(true);
     try {
       await createProduct({
-        name: name.trim(),
-        product_type: productType,
-        price: Number(price),
+        name: name.trim(), product_type: productType, price: Number(price),
         compare_price: comparePrice ? Number(comparePrice) : undefined,
-        sku: sku.trim() || undefined,
-        stock_qty: Number(stockQty) || 0,
+        sku: sku.trim() || undefined, stock_qty: Number(stockQty) || 0,
         category_id: categoryId ? Number(categoryId) : undefined,
         brand_id: brandId ? Number(brandId) : undefined,
-        short_desc: shortDesc.trim() || undefined,
-        long_desc: longDesc || undefined,
-        image_urls: imageUrls,
-        is_featured: isFeatured,
-        meta_title: metaTitle.trim() || undefined,
-        meta_desc: metaDesc.trim() || undefined,
+        short_desc: shortDesc.trim() || undefined, long_desc: longDesc || undefined,
+        image_urls: imageUrls, is_featured: isFeatured,
+        meta_title: metaTitle.trim() || undefined, meta_desc: metaDesc.trim() || undefined,
         specifications: Object.keys(specs).length ? specs : undefined,
       });
       router.push("/admin/products");
@@ -99,246 +114,137 @@ export default function NewProductPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-10 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-gray-500 hover:text-gray-900 transition"
-        >
+      <div className="mb-8">
+        <button onClick={() => router.back()} className="text-xs font-medium transition mb-4 flex items-center gap-1"
+          style={{ color: "#aaa" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#111")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#aaa")}>
           ← Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Add Product</h1>
+        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "#111" }}>Add Product</h1>
       </div>
 
       {error && (
-        <div className="mb-5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="mb-6 rounded-xl px-4 py-3 text-sm flex items-center justify-between"
+          style={{ background: "#fff1f1", color: "#c92a2a", border: "1px solid #ffd6d6" }}>
           {error}
+          <button onClick={() => setError(null)} className="font-bold ml-3">×</button>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* ── Basic Info ──────────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
-            Basic Info
-          </h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Basic Info */}
+        <Section title="Basic Info">
+          <Field label="Product Name" required>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Bambu Lab P1S" className={inputCls} style={inputStyle} />
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Product Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Bambu Lab P1S"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Product Type" required>
+              <select value={productType} onChange={(e) => setProductType(e.target.value)}
+                className={inputCls} style={inputStyle}>
+                {productTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </Field>
+            <Field label="SKU">
+              <input type="text" value={sku} onChange={(e) => setSku(e.target.value)}
+                placeholder="BL-P1S-001" className={inputCls} style={inputStyle} />
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={productType}
-                onChange={(e) => setProductType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {productTypes.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-              <input
-                type="text"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="e.g. BL-P1S-001"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+            <Field label="Category">
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
+                className={inputCls} style={inputStyle}>
                 <option value="">— None —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-              <select
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+            </Field>
+            <Field label="Brand">
+              <select value={brandId} onChange={(e) => setBrandId(e.target.value)}
+                className={inputCls} style={inputStyle}>
                 <option value="">— None —</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
+                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
-            </div>
+            </Field>
           </div>
-        </section>
+        </Section>
 
-        {/* ── Pricing & Stock ─────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
-            Pricing & Stock
-          </h2>
+        {/* Pricing & Stock */}
+        <Section title="Pricing & Stock">
           <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (৳) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                required
-                min={0}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="95000"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Compare Price (৳)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={comparePrice}
-                onChange={(e) => setComparePrice(e.target.value)}
-                placeholder="105000"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Qty</label>
-              <input
-                type="number"
-                min={0}
-                value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <Field label="Price (৳)" required>
+              <input type="number" required min={0} value={price} onChange={(e) => setPrice(e.target.value)}
+                placeholder="95000" className={inputCls} style={inputStyle} />
+            </Field>
+            <Field label="Compare Price (৳)">
+              <input type="number" min={0} value={comparePrice} onChange={(e) => setComparePrice(e.target.value)}
+                placeholder="105000" className={inputCls} style={inputStyle} />
+            </Field>
+            <Field label="Stock Qty">
+              <input type="number" min={0} value={stockQty} onChange={(e) => setStockQty(e.target.value)}
+                className={inputCls} style={inputStyle} />
+            </Field>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={isFeatured}
-              onChange={(e) => setIsFeatured(e.target.checked)}
-              className="rounded"
-            />
+
+          <label className="flex items-center gap-2.5 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
+            <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="rounded" />
             Mark as featured (shows on homepage)
           </label>
+        </Section>
+
+        {/* Images */}
+        <section className="rounded-2xl p-6" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest mb-5" style={{ color: "#aaa" }}>Images</h2>
+          <MultiImageUpload value={imageUrls} onChange={setImageUrls} />
         </section>
 
-        {/* ── Product Images ───────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5">
-          <MultiImageUpload
-            value={imageUrls}
-            onChange={setImageUrls}
-          />
-        </section>
-
-        {/* ── Description ─────────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
-            Description
-          </h2>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Short Description
-            </label>
-            <input
-              type="text"
-              value={shortDesc}
-              onChange={(e) => setShortDesc(e.target.value)}
+        {/* Description */}
+        <Section title="Description">
+          <Field label="Short Description">
+            <input type="text" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)}
               placeholder="One-line summary shown on product cards"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              className={inputCls} style={inputStyle} />
+          </Field>
+          <Field label="Long Description">
+            <RichTextEditor value={longDesc} onChange={setLongDesc}
+              placeholder="Write a detailed product description…" minHeight={320} />
+          </Field>
+        </Section>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Long Description
-              <span className="ml-1 font-normal text-gray-400 text-xs">
-                — rich text, supports images
-              </span>
-            </label>
-            <RichTextEditor
-              value={longDesc}
-              onChange={setLongDesc}
-              placeholder="Write a detailed product description. Use the toolbar to add headings, lists, and images…"
-              minHeight={320}
-            />
-          </div>
-        </section>
-
-        {/* ── Specifications ───────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5">
+        {/* Specifications */}
+        <section className="rounded-2xl p-6" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest mb-5" style={{ color: "#aaa" }}>Specifications</h2>
           <SpecificationsEditor value={specs} onChange={setSpecs} />
         </section>
 
-        {/* ── SEO ─────────────────────────────────────────────────────────── */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">SEO</h2>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Meta Title</label>
-            <input
-              type="text"
-              value={metaTitle}
-              onChange={(e) => setMetaTitle(e.target.value)}
+        {/* SEO */}
+        <Section title="SEO">
+          <Field label="Meta Title">
+            <input type="text" value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)}
               placeholder="Bambu Lab P1S 3D Printer | PrototypeBD"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Meta Description
-            </label>
-            <textarea
-              rows={2}
-              value={metaDesc}
-              onChange={(e) => setMetaDesc(e.target.value)}
+              className={inputCls} style={inputStyle} />
+          </Field>
+          <Field label="Meta Description">
+            <textarea rows={2} value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)}
               placeholder="Buy the Bambu Lab P1S in Bangladesh…"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </section>
+              className={inputCls} style={{ ...inputStyle, resize: "vertical" }} />
+          </Field>
+        </Section>
 
-        {/* ── Submit ──────────────────────────────────────────────────────── */}
-        <div className="flex gap-3 pb-10">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-gray-900 text-white font-semibold text-sm px-6 py-2.5 hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+        {/* Submit */}
+        <div className="flex gap-3 pb-10 pt-2">
+          <button type="submit" disabled={saving}
+            className="rounded-xl text-sm font-semibold px-6 py-2.5 transition disabled:opacity-50"
+            style={{ background: "#111", color: "#fff" }}>
             {saving ? "Saving…" : "Save Product"}
           </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="rounded-lg border border-gray-200 text-gray-700 text-sm px-4 py-2.5 hover:bg-gray-50 transition"
-          >
+          <button type="button" onClick={() => router.back()}
+            className="rounded-xl text-sm px-4 py-2.5 transition font-medium"
+            style={{ border: "1px solid #e0e0e0", color: "#555", background: "#fff" }}>
             Cancel
           </button>
         </div>

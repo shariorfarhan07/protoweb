@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ProductList } from "@/lib/api-types";
-import { buildImageUrl, formatDiscount, formatPrice } from "@/lib/utils";
+import { buildImageUrl, formatDiscount, formatPrice, imageBg } from "@/lib/utils";
 import { CompareToggle } from "@/components/product/CompareToggle";
 
 interface ProductCardProps {
@@ -26,7 +26,7 @@ export function ProductCard({ product }: ProductCardProps) {
         className="relative block overflow-hidden"
         style={{
           aspectRatio: "1",
-          background: "var(--bg)",
+          background: imageBg(product.primary_image),
         }}
         tabIndex={-1}
       >

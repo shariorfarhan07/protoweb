@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import type { ImageSchema } from "@/lib/api-types";
-import { buildImageUrl } from "@/lib/utils";
+import { buildImageUrl, imageBg } from "@/lib/utils";
 
 interface ImageGalleryProps {
   images: ImageSchema[];
@@ -54,8 +54,8 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
     <div className="flex flex-col gap-3 shrink-0" style={{ width: 440 }}>
       {/* ── Main image ── */}
       <div
-        className="relative rounded-card overflow-hidden bg-gray-50 select-none"
-        style={{ aspectRatio: "1" }}
+        className="relative rounded-card overflow-hidden select-none"
+        style={{ aspectRatio: "1", background: imageBg(active.url) }}
       >
         <Image
           key={active.url}
@@ -111,7 +111,7 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
                 width: 72,
                 height: 72,
                 borderColor: i === activeIdx ? "var(--fg)" : "var(--border)",
-                background: "var(--bg)",
+                background: imageBg(img.url),
               }}
             >
               <Image

@@ -5,22 +5,20 @@ import { getAdminOrders, updateOrderStatus } from "@/lib/api";
 import type { OrderOut, OrderStatus, PaginatedResponse } from "@/lib/api-types";
 
 const ORDER_STATUSES: OrderStatus[] = [
-  "pending",
-  "confirmed",
-  "processing",
-  "shipped",
-  "delivered",
-  "cancelled",
+  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
 ];
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  processing: "bg-indigo-100 text-indigo-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+const STATUS_STYLE: Record<OrderStatus, { bg: string; color: string }> = {
+  pending:    { bg: "#fff8ed", color: "#c45b00" },
+  confirmed:  { bg: "#edf6ff", color: "#0070c9" },
+  processing: { bg: "#f0edff", color: "#6e40c9" },
+  shipped:    { bg: "#f5eeff", color: "#8b3fcf" },
+  delivered:  { bg: "#edfff5", color: "#1a7a45" },
+  cancelled:  { bg: "#fff1f1", color: "#c92a2a" },
 };
+
+const TH = "px-5 py-3 text-left font-medium uppercase tracking-widest whitespace-nowrap";
+const TD = "px-5 py-3.5 align-middle";
 
 export default function AdminOrdersPage() {
   const [data, setData] = useState<PaginatedResponse<OrderOut> | null>(null);
@@ -34,11 +32,7 @@ export default function AdminOrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getAdminOrders({
-        status: filterStatus || undefined,
-        page,
-        page_size: 20,
-      });
+      const result = await getAdminOrders({ status: filterStatus || undefined, page, page_size: 20 });
       setData(result);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load orders");
@@ -47,21 +41,14 @@ export default function AdminOrdersPage() {
     }
   }, [filterStatus, page]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   async function handleStatusChange(orderId: number, newStatus: string) {
     setUpdatingId(orderId);
     try {
       const updated = await updateOrderStatus(orderId, newStatus);
       setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((o) => (o.id === updated.id ? updated : o)),
-            }
-          : prev
+        prev ? { ...prev, items: prev.items.map((o) => (o.id === updated.id ? updated : o)) } : prev
       );
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Update failed");
@@ -71,146 +58,161 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Orders</h1>
-      <p className="text-sm text-gray-500 mb-6">
-        {data ? `${data.total} orders total` : "Loading…"}
-      </p>
+    <div className="p-10">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight" style={{ color: "#111" }}>Orders</h1>
+          <p style={{ color: "#aaa", fontSize: 13 }} className="mt-1">
+            {data ? `${data.total} orders` : "Loading…"}
+          </p>
+        </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
         <select
           value={filterStatus}
-          onChange={(e) => {
-            setFilterStatus(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-gray-200 text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+          className="text-sm rounded-lg px-3 py-2 transition focus:outline-none"
+          style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333" }}
         >
           <option value="">All statuses</option>
           {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s} className="capitalize">
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
+            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="mb-5 rounded-xl px-4 py-3 text-sm" style={{ background: "#fff1f1", color: "#c92a2a", border: "1px solid #ffd6d6" }}>
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead style={{ borderBottom: "1px solid #f0f0f0" }}>
             <tr>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Order #</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Customer</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Items</th>
-              <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Date</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Update Status</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Order #</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Customer</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Items</th>
+              <th className={TH + " text-right"} style={{ fontSize: 10, color: "#bbb" }}>Total</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Status</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Date</th>
+              <th className={TH} style={{ fontSize: 10, color: "#bbb" }}>Update</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading &&
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-gray-100 rounded animate-pulse" />
-                    </td>
-                  ))}
-                </tr>
-              ))}
+          <tbody>
+            {loading && Array.from({ length: 6 }).map((_, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid #f7f7f7" }}>
+                {Array.from({ length: 7 }).map((_, j) => (
+                  <td key={j} className={TD}>
+                    <div className="h-3.5 rounded-full animate-pulse" style={{ background: "#f0f0f0", width: j === 1 ? "120px" : "60px" }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+
             {!loading && data?.items.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-5 py-16 text-center text-sm" style={{ color: "#bbb" }}>
                   No orders found
                 </td>
               </tr>
             )}
-            {!loading &&
-              data?.items.map((order) => {
-                const addr = order.shipping_address;
-                return (
-                  <tr key={order.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 font-mono text-xs font-medium text-gray-700">
+
+            {!loading && data?.items.map((order) => {
+              const addr = order.shipping_address;
+              const s = order.status as OrderStatus;
+              return (
+                <tr
+                  key={order.id}
+                  className="transition-colors"
+                  style={{ borderBottom: "1px solid #f7f7f7" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#fafaf8")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "")}
+                >
+                  <td className={TD}>
+                    <span className="font-mono text-xs font-medium" style={{ color: "#555" }}>
                       {order.order_number}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">
-                        {addr.first_name} {addr.last_name}
-                      </p>
-                      <p className="text-xs text-gray-400">{addr.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {order.items.length} item{order.items.length !== 1 ? "s" : ""}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ৳{order.total_price.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                          STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString("en-BD")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        defaultValue={order.status}
-                        disabled={updatingId === order.id}
-                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                        className="rounded-md border border-gray-200 text-xs px-2 py-1 bg-white disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        {ORDER_STATUSES.map((s) => (
-                          <option key={s} value={s} className="capitalize">
-                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })}
+                    </span>
+                  </td>
+                  <td className={TD}>
+                    <p className="font-medium" style={{ color: "#111" }}>{addr.first_name} {addr.last_name}</p>
+                    <p style={{ fontSize: 12, color: "#bbb" }}>{addr.email}</p>
+                  </td>
+                  <td className={TD} style={{ color: "#777" }}>
+                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                  </td>
+                  <td className={TD + " text-right font-semibold"} style={{ color: "#111" }}>
+                    ৳{order.total_price.toLocaleString()}
+                  </td>
+                  <td className={TD}>
+                    <span
+                      className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                      style={STATUS_STYLE[s] ?? { bg: "#f5f5f5", color: "#555" }}
+                    >
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className={TD} style={{ fontSize: 12, color: "#aaa" }}>
+                    {new Date(order.created_at).toLocaleDateString("en-BD")}
+                  </td>
+                  <td className={TD}>
+                    <select
+                      defaultValue={order.status}
+                      disabled={updatingId === order.id}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className="text-xs rounded-lg px-2 py-1.5 transition focus:outline-none disabled:opacity-40"
+                      style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333" }}
+                    >
+                      {ORDER_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
-      {data && data.total_pages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <p className="text-gray-500">
-            Page {data.page} of {data.total_pages}
-          </p>
-          <div className="flex gap-2">
+      <Pagination data={data} page={page} setPage={setPage} />
+    </div>
+  );
+}
+
+function Pagination({
+  data,
+  page,
+  setPage,
+}: {
+  data: PaginatedResponse<unknown> | null;
+  page: number;
+  setPage: (fn: (p: number) => number) => void;
+}) {
+  if (!data || data.total_pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between mt-5">
+      <p style={{ fontSize: 12, color: "#aaa" }}>
+        Page {data.page} of {data.total_pages}
+      </p>
+      <div className="flex gap-2">
+        {(["Previous", "Next"] as const).map((label) => {
+          const disabled = label === "Previous" ? page <= 1 : page >= data.total_pages;
+          return (
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              key={label}
+              onClick={() => setPage((p) => label === "Previous" ? Math.max(1, p - 1) : Math.min(data.total_pages, p + 1))}
+              disabled={disabled}
+              className="text-xs rounded-lg px-3 py-1.5 transition font-medium disabled:opacity-30"
+              style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333" }}
             >
-              Previous
+              {label}
             </button>
-            <button
-              onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
-              disabled={page >= data.total_pages}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
