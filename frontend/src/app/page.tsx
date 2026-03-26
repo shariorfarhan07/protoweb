@@ -1,8 +1,54 @@
 import type { Metadata } from "next";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
+import ReviewsCarousel from "@/components/home/ReviewsCarousel";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { getCategories, getFeaturedProducts } from "@/lib/api";
+import { getCategories, getFeaturedProducts, getReviews } from "@/lib/api";
+import type { CategorySchema, ProductList, ReviewOut } from "@/lib/api-types";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://prototypebd.com";
+
+function ReviewsJsonLd({ reviews }: { reviews: ReviewOut[] }) {
+  if (reviews.length === 0) return null;
+  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PrototypeBD",
+    "url": SITE_URL,
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": avgRating,
+      "reviewCount": reviews.length,
+      "bestRating": "5",
+      "worstRating": "1",
+    },
+    "review": reviews.map((r) => ({
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": r.reviewer_name,
+        ...(r.reviewer_title ? { "jobTitle": r.reviewer_title } : {}),
+      },
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": r.rating,
+        "bestRating": "5",
+        "worstRating": "1",
+      },
+      "reviewBody": r.content,
+      "datePublished": r.created_at.split("T")[0],
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
 
 export const revalidate = 60;
 
@@ -13,10 +59,24 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [categories, featured] = await Promise.all([
-    getCategories(),
-    getFeaturedProducts(8),
-  ]);
+  let categories: CategorySchema[] = [];
+  let featured: ProductList[] = [];
+  let reviews: ReviewOut[] = [];
+
+  try {
+    [categories, featured] = await Promise.all([
+      getCategories(),
+      getFeaturedProducts(8),
+    ]);
+  } catch (error) {
+    console.warn("Home page data fetch failed:", error);
+  }
+
+  try {
+    reviews = await getReviews();
+  } catch (error) {
+    console.warn("Reviews fetch failed:", error);
+  }
 
   return (
     <>
@@ -44,6 +104,12 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Customer Reviews Carousel */}
+      <ReviewsCarousel reviews={reviews} />
+
+      {/* JSON-LD structured data — injected into <body> (Next.js hoists script tags correctly) */}
+      <ReviewsJsonLd reviews={reviews} />
     </>
   );
 }

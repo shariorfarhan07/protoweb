@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.order import Order, OrderItem
 from app.models.wishlist import WishlistItem
 from app.models.product_type import ProductType
+from app.models.review import Review
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "OrderItem",
     "WishlistItem",
     "ProductType",
+    "Review",
 ]

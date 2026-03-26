@@ -15,7 +15,9 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const effectivePrice =
-    product.price + (selectedVariant?.price_delta ?? 0);
+    selectedVariant?.variant_price != null
+      ? selectedVariant.variant_price
+      : product.price + (selectedVariant?.price_delta ?? 0);
 
   const inStock =
     selectedVariant != null

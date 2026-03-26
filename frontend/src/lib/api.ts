@@ -3,13 +3,19 @@ import type {
   BrandSchema,
   CategorySchema,
   CompareResponse,
+  FilamentVariantSchema,
   OrderOut,
   PaginatedResponse,
   ProductDetail,
   ProductList,
   ProductTypeSchema,
+  ReviewCreate,
+  ReviewOut,
+  ReviewUpdate,
   TokenResponse,
   UserPublic,
+  VariantCreate,
+  VariantUpdate,
 } from "./api-types";
 
 const API_BASE =
@@ -311,6 +317,35 @@ export async function updateUser(
   });
 }
 
+export interface AdminProductFilters {
+  search?: string;
+  product_type?: string;
+  category?: string;
+  is_active?: boolean;
+  is_featured?: boolean;
+  low_stock?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export async function adminListProducts(
+  params: AdminProductFilters = {}
+): Promise<PaginatedResponse<ProductList>> {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.product_type) qs.set("product_type", params.product_type);
+  if (params.category) qs.set("category", params.category);
+  if (params.is_active !== undefined) qs.set("is_active", String(params.is_active));
+  if (params.is_featured !== undefined) qs.set("is_featured", String(params.is_featured));
+  if (params.low_stock !== undefined) qs.set("low_stock", String(params.low_stock));
+  if (params.page) qs.set("page", String(params.page));
+  if (params.page_size) qs.set("page_size", String(params.page_size));
+  return apiFetch(`/admin/products${qs.toString() ? `?${qs}` : ""}`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
 export async function getAdminInventory(
   params: { low_stock_only?: boolean; page?: number; page_size?: number } = {}
 ): Promise<PaginatedResponse<ProductList>> {
@@ -497,6 +532,86 @@ export async function adminUpdateProductType(
 
 export async function adminDeleteProductType(id: number): Promise<void> {
   await apiFetch(`/admin/product-types/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── Color Variants ────────────────────────────────────────────────────────────
+
+export async function adminListVariants(productId: number): Promise<FilamentVariantSchema[]> {
+  return apiFetch(`/admin/products/${productId}/variants`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function adminCreateVariant(
+  productId: number,
+  data: VariantCreate
+): Promise<FilamentVariantSchema> {
+  return apiFetch(`/admin/products/${productId}/variants`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function adminUpdateVariant(
+  variantId: number,
+  data: VariantUpdate
+): Promise<FilamentVariantSchema> {
+  return apiFetch(`/admin/variants/${variantId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function adminDeleteVariant(variantId: number): Promise<void> {
+  await apiFetch(`/admin/variants/${variantId}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+
+export async function getReviews(): Promise<ReviewOut[]> {
+  return apiFetch("/reviews", { cache: "no-store" });
+}
+
+export async function adminListReviews(): Promise<ReviewOut[]> {
+  return apiFetch("/reviews/admin", {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function adminCreateReview(data: ReviewCreate): Promise<ReviewOut> {
+  return apiFetch("/reviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function adminUpdateReview(id: number, data: ReviewUpdate): Promise<ReviewOut> {
+  return apiFetch(`/reviews/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function adminDeleteReview(id: number): Promise<void> {
+  await apiFetch(`/reviews/${id}`, {
     method: "DELETE",
     headers: { ...authHeader() },
     cache: "no-store",

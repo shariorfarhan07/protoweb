@@ -7,13 +7,19 @@ import { formatPrice } from "@/lib/utils";
 interface FilamentVariantsProps {
   variants: FilamentVariantSchema[];
   onVariantChange?: (variant: FilamentVariantSchema | null) => void;
+  basePrice?: number;
 }
 
-export function FilamentVariants({ variants, onVariantChange }: FilamentVariantsProps) {
+export function FilamentVariants({ variants, onVariantChange, basePrice }: FilamentVariantsProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const active = variants.find((v) => v.id === selectedId) ?? null;
-  const grouped = groupByMaterial(variants.filter((v) => v.is_active));
+  const activeVariants = variants.filter((v) => v.is_active);
+  // Group by material if any variant has a material, otherwise show flat list
+  const hasMaterials = activeVariants.some((v) => v.material);
+  const grouped = hasMaterials
+    ? groupByMaterial(activeVariants)
+    : { Colors: activeVariants };
 
   function select(variant: FilamentVariantSchema) {
     const newId = variant.id === selectedId ? null : variant.id;
@@ -28,7 +34,7 @@ export function FilamentVariants({ variants, onVariantChange }: FilamentVariants
       {Object.entries(grouped).map(([material, vars]) => (
         <div key={material}>
           <p className="text-xs font-semibold uppercase mb-3" style={{ letterSpacing: 2, color: "var(--subtle)" }}>
-            {material} — {vars.length} color{vars.length !== 1 ? "s" : ""}
+            {material === "Colors" ? `${vars.length} color${vars.length !== 1 ? "s" : ""}` : `${material} — ${vars.length} color${vars.length !== 1 ? "s" : ""}`}
           </p>
           <div className="flex flex-wrap gap-2">
             {vars.map((v) => (
@@ -70,20 +76,26 @@ export function FilamentVariants({ variants, onVariantChange }: FilamentVariants
           style={{ background: "rgba(0,0,0,0.04)" }}
         >
           <p className="font-semibold">
-            {active.color_name} — {active.material}
+            {active.color_name}{active.material ? ` — ${active.material}` : ""}
           </p>
           <p className="text-gray-500 text-xs mt-1">
-            Diameter: {active.diameter_mm ?? 1.75}mm ·{" "}
-            {active.weight_grams ? `${active.weight_grams}g` : "1KG"} ·{" "}
+            {active.material && `Diameter: ${active.diameter_mm ?? 1.75}mm · ${active.weight_grams ? `${active.weight_grams}g` : "1KG"} · `}
             {active.stock_qty > 0
               ? `${active.stock_qty} in stock`
               : "Out of stock"}
           </p>
-          {active.price_delta > 0 && (
+          {active.variant_price != null ? (
+            <p className="font-semibold mt-1">{formatPrice(active.variant_price)}</p>
+          ) : active.price_delta !== 0 ? (
             <p className="font-semibold mt-1">
-              +{formatPrice(active.price_delta)}
+              {active.price_delta > 0 ? "+" : ""}{formatPrice(active.price_delta)}
+              {basePrice != null && (
+                <span className="font-normal text-gray-400 ml-1 text-xs">
+                  = {formatPrice(basePrice + active.price_delta)}
+                </span>
+              )}
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

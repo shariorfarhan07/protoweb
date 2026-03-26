@@ -2,9 +2,12 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 
+from app.core.logging import get_logger
 from app.repositories.product import ProductRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.product import ProductDetail, ProductList
+
+logger = get_logger("app.services.product")
 
 
 class ProductService:
@@ -47,10 +50,12 @@ class ProductService:
     async def get_product_by_slug(self, slug: str) -> ProductDetail:
         product = await self.repo.get_by_slug(slug)
         if not product:
+            logger.info("Product not found: slug=%s", slug)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Product '{slug}' not found",
             )
+        logger.debug("Product page viewed: id=%d slug=%s", product.id, slug)
         return ProductDetail.model_validate(product)
 
     async def get_featured_products(self, limit: int = 8) -> list[ProductList]:

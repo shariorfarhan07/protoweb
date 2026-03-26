@@ -7,6 +7,7 @@ import { getAdminProduct, updateProduct, getBrands, getCategories, getProductTyp
 import type { BrandSchema, CategorySchema, ProductDetail, ProductTypeSchema } from "@/lib/api-types";
 import MultiImageUpload from "@/components/admin/MultiImageUpload";
 import SpecificationsEditor from "@/components/admin/SpecificationsEditor";
+import VariantManager from "@/components/admin/VariantManager";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
   ssr: false,
@@ -268,6 +269,15 @@ export default function EditProductPage() {
               placeholder="Write a detailed product description…" minHeight={320} />
           </Field>
         </Section>
+
+        {/* Color Variants */}
+        <section className="rounded-2xl p-6" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Color Variants</h2>
+          <p className="text-xs mb-5" style={{ color: "#bbb" }}>
+            Add per-color stock, image, and pricing. Each color swatch lets customers switch the displayed product image.
+          </p>
+          <VariantManager productId={productId} />
+        </section>
 
         {/* Specifications */}
         <section className="rounded-2xl p-6" style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>

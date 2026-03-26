@@ -76,6 +76,16 @@ const NAV = [
     ),
     superAdminOnly: true,
   },
+  {
+    href: "/admin/reviews",
+    label: "Reviews",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5l1.545 3.13 3.455.502-2.5 2.437.59 3.44L8 9.385l-3.09 1.624.59-3.44L3 5.132l3.455-.502L8 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+      </svg>
+    ),
+    superAdminOnly: false,
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -1,49 +1,65 @@
-import logging
-import logging.config
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
+from app.core.logging import configure_logging, get_logger
 
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {
-            "format": "%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-        },
-    },
-    "loggers": {
-        "app": {"level": "DEBUG", "handlers": ["console"], "propagate": False},
-        "sqlalchemy.engine": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "uvicorn.error": {"level": "INFO", "handlers": ["console"], "propagate": False},
-        "uvicorn.access": {"level": "INFO", "handlers": ["console"], "propagate": False},
-    },
-    "root": {"level": "INFO", "handlers": ["console"]},
-}
+# ── Logging must be configured before any other app import ─────────────────
+configure_logging()
+logger = get_logger("app.main")
 
-logging.config.dictConfig(LOGGING_CONFIG)
-logger = logging.getLogger("app.main")
 from app.core.database import engine
 from app.models.base import Base
-from app.routers import admin, auth, brands, categories, compare, orders, product_types, products, search, upload, wishlist
+from app.routers import admin, auth, brands, categories, compare, orders, product_types, products, reviews, search, upload, wishlist
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 (STATIC_DIR / "uploads").mkdir(exist_ok=True)
+
+_http_logger = get_logger("app.http")
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log every inbound request with method, path, status code, duration, and client IP."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        start = time.perf_counter()
+        client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+        try:
+            response: Response = await call_next(request)
+        except Exception as exc:
+            duration_ms = (time.perf_counter() - start) * 1000
+            _http_logger.error(
+                "Unhandled exception during %s %s from %s (%.1fms)",
+                request.method, request.url.path, client_ip, duration_ms,
+                exc_info=exc,
+            )
+            raise
+        duration_ms = (time.perf_counter() - start) * 1000
+        level = "warning" if response.status_code >= 400 else "info"
+        getattr(_http_logger, level)(
+            "%s %s %d %.1fms %s",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            client_ip,
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(duration_ms, 1),
+                "client_ip": client_ip,
+            },
+        )
+        return response
 
 
 async def _seed_default_product_types() -> None:
@@ -87,6 +103,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+logger.info("CORS allowed origins: %s", settings.ALLOWED_ORIGINS)
+
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -110,6 +129,7 @@ for _router in [
     admin.router,
     upload.router,
     product_types.router,
+    reviews.router,
 ]:
     app.include_router(_router, prefix=settings.API_PREFIX)
 

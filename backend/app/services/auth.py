@@ -1,5 +1,6 @@
 from fastapi import HTTPException, Response, status
 
+from app.core.logging import get_logger
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -10,14 +11,21 @@ from app.models.user import User
 from app.repositories.user import UserRepository
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserPublic
 
+logger = get_logger("app.services.auth")
+
 
 class AuthService:
     def __init__(self, repo: UserRepository) -> None:
         self.repo = repo
 
     async def register(self, data: RegisterRequest) -> UserPublic:
+        logger.info("Registration attempt for email=%s", data.email)
         existing = await self.repo.get_by_email(data.email)
         if existing:
+            logger.warning(
+                "Registration rejected — email already in use: %s", data.email,
+                extra={"event": "register_duplicate", "email": data.email},
+            )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already registered",
@@ -30,16 +38,30 @@ class AuthService:
             phone=data.phone,
         )
         user = await self.repo.create(user)
+        logger.info(
+            "New user registered: id=%d email=%s",
+            user.id, user.email,
+            extra={"event": "register_success", "user_id": user.id, "email": user.email},
+        )
         return UserPublic.model_validate(user)
 
     async def login(self, data: LoginRequest, response: Response) -> TokenResponse:
+        logger.debug("Login attempt for email=%s", data.email)
         user = await self.repo.get_by_email(data.email)
         if not user or not verify_password(data.password, user.password_hash):
+            logger.warning(
+                "Login failed — invalid credentials for email=%s", data.email,
+                extra={"event": "login_failure", "reason": "bad_credentials", "email": data.email},
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
             )
         if not user.is_active:
+            logger.warning(
+                "Login rejected — account disabled: id=%d email=%s", user.id, user.email,
+                extra={"event": "login_failure", "reason": "account_disabled", "user_id": user.id},
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is disabled",
@@ -63,6 +85,11 @@ class AuthService:
             secure=False,
         )
 
+        logger.info(
+            "Login success: id=%d email=%s role=%s",
+            user.id, user.email, user.role,
+            extra={"event": "login_success", "user_id": user.id, "email": user.email, "role": user.role},
+        )
         return TokenResponse(
             access_token=access_token,
             user=UserPublic.model_validate(user),
@@ -72,4 +99,5 @@ class AuthService:
     def logout(response: Response) -> dict:
         response.delete_cookie("access_token")
         response.delete_cookie("refresh_token")
+        logger.info("User logged out (cookies cleared)", extra={"event": "logout"})
         return {"message": "Logged out"}

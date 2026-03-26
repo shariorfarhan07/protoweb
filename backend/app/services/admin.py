@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_logger
 from app.models.order import OrderStatus
 from app.models.product import Product
 from app.repositories.order import OrderRepository
@@ -15,6 +16,7 @@ from app.schemas.common import PaginatedResponse
 from app.schemas.order import OrderOut, OrderStatusUpdate
 from app.schemas.product import ProductCreate, ProductDetail, ProductList, ProductUpdate
 
+logger = get_logger("app.services.admin")
 
 LOW_STOCK_THRESHOLD = 5
 
@@ -79,8 +81,11 @@ class AdminService:
     async def update_user(self, user_id: int, data: UserUpdate) -> UserAdminOut:
         user = await self.user_repo.get_by_id(user_id)
         if not user:
+            logger.warning("update_user: user_id=%d not found", user_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        changes: dict = {}
         if data.is_active is not None:
+            changes["is_active"] = {"from": user.is_active, "to": data.is_active}
             user.is_active = data.is_active
         if data.role is not None:
             from app.models.user import UserRole
@@ -90,8 +95,14 @@ class AdminService:
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}",
                 )
+            changes["role"] = {"from": user.role, "to": data.role}
             user.role = data.role
         user = await self.user_repo.update(user)
+        logger.info(
+            "Admin updated user id=%d email=%s changes=%s",
+            user.id, user.email, changes,
+            extra={"event": "admin_user_update", "user_id": user.id, "changes": changes},
+        )
         return UserAdminOut.model_validate(user)
 
     # ── Order management ──────────────────────────────────────────────────────
@@ -123,10 +134,18 @@ class AdminService:
             )
         order = await self.order_repo.get_by_id_with_items(order_id)
         if not order:
+            logger.warning("update_order_status: order_id=%d not found", order_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+        prev_status = order.status
         order.status = data.status
         await self.order_repo.update(order)
         order = await self.order_repo.get_by_id_with_items(order.id)
+        logger.info(
+            "Admin updated order id=%d number=%s status: %s → %s",
+            order_id, order.order_number, prev_status, data.status,
+            extra={"event": "admin_order_status_update", "order_id": order_id,
+                   "from_status": str(prev_status), "to_status": data.status},
+        )
         return OrderOut.model_validate(order)
 
     # ── Inventory management ──────────────────────────────────────────────────
@@ -238,6 +257,11 @@ class AdminService:
             .options(*_product_options())
         )
         product = (await self.product_repo.session.execute(q)).scalars().first()
+        logger.info(
+            "Product created: id=%d slug=%s sku=%s price=%.2f stock=%d",
+            product.id, product.slug, product.sku, float(product.price), product.stock_qty,
+            extra={"event": "product_created", "product_id": product.id, "slug": product.slug, "sku": product.sku},
+        )
         return ProductDetail.model_validate(product)
 
     async def get_product_by_id(self, product_id: int) -> ProductDetail:
@@ -300,21 +324,39 @@ class AdminService:
             .options(*_product_options())
         )
         product = (await self.product_repo.session.execute(q)).scalars().first()
+        logger.info(
+            "Product updated: id=%d slug=%s fields_changed=%s",
+            product_id, product.slug, list(update_data.keys()),
+            extra={"event": "product_updated", "product_id": product_id, "fields": list(update_data.keys())},
+        )
         return ProductDetail.model_validate(product)
 
     async def delete_product(self, product_id: int) -> dict:
         product = await self.product_repo.get_by_id(product_id)
         if not product:
+            logger.warning("delete_product: product_id=%d not found", product_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         # Soft delete
         product.is_active = False
         await self.product_repo.update(product)
+        logger.info(
+            "Product soft-deleted: id=%d slug=%s", product_id, product.slug,
+            extra={"event": "product_deleted", "product_id": product_id, "slug": product.slug},
+        )
         return {"message": f"Product {product_id} deactivated"}
 
     async def update_stock(self, product_id: int, data: StockUpdate) -> dict:
         product = await self.product_repo.get_by_id(product_id)
         if not product:
+            logger.warning("update_stock: product_id=%d not found", product_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        prev_qty = product.stock_qty
         product.stock_qty = data.stock_qty
         await self.product_repo.update(product)
+        logger.info(
+            "Stock updated: product_id=%d sku=%s qty: %d → %d",
+            product.id, product.sku, prev_qty, data.stock_qty,
+            extra={"event": "stock_updated", "product_id": product.id, "sku": product.sku,
+                   "prev_qty": prev_qty, "new_qty": data.stock_qty},
+        )
         return {"id": product.id, "stock_qty": product.stock_qty}

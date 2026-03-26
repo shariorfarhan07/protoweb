@@ -105,6 +105,53 @@ class ProductRepository(BaseRepository[Product]):
         )
         return list((await self.session.execute(q)).scalars().unique().all())
 
+    async def list_admin(
+        self,
+        *,
+        search: Optional[str] = None,
+        product_type: Optional[str] = None,
+        category_slug: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_featured: Optional[bool] = None,
+        low_stock: Optional[bool] = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[Sequence[Product], int]:
+        q = select(Product)
+
+        if search:
+            term = f"%{search.strip()}%"
+            q = q.where(
+                or_(
+                    Product.name.ilike(term),
+                    Product.sku.ilike(term),
+                )
+            )
+        if product_type:
+            q = q.where(Product.product_type == product_type)
+        if category_slug:
+            q = q.join(Category, Product.category_id == Category.id).where(
+                Category.slug == category_slug
+            )
+        if is_active is not None:
+            q = q.where(Product.is_active == is_active)
+        if is_featured is not None:
+            q = q.where(Product.is_featured == is_featured)
+        if low_stock:
+            q = q.where(Product.stock_qty <= 5)
+
+        count_q = select(func.count()).select_from(q.subquery())
+        total: int = (await self.session.execute(count_q)).scalar_one()
+
+        q = (
+            q.options(*_product_options())
+            .offset(offset)
+            .limit(limit)
+            .order_by(Product.created_at.desc())
+        )
+        result = (await self.session.execute(q)).scalars().unique().all()
+        return result, total
+
     async def get_featured(self, limit: int = 8) -> list[Product]:
         q = (
             select(Product)

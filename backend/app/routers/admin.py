@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.core.deps import require_admin, require_inventory, require_super_admin
 from app.repositories.brand import BrandRepository
 from app.repositories.category import CategoryRepository
+from app.repositories.filament_variant import FilamentVariantRepository
 from app.repositories.order import OrderRepository
 from app.repositories.product import ProductRepository
 from app.repositories.product_type import ProductTypeRepository
@@ -15,8 +16,9 @@ from app.schemas.admin import AdminStatsOut, StockUpdate, UserAdminOut, UserUpda
 from app.schemas.brand import BrandCreate, BrandSchema, BrandUpdate
 from app.schemas.category import CategoryCreate, CategorySchema, CategoryUpdate
 from app.schemas.common import PaginatedResponse
+from app.schemas.filament_variant import VariantCreate, VariantUpdate
 from app.schemas.order import OrderOut, OrderStatusUpdate
-from app.schemas.product import ProductCreate, ProductDetail, ProductList, ProductUpdate
+from app.schemas.product import FilamentVariantSchema, ProductCreate, ProductDetail, ProductList, ProductUpdate
 from app.schemas.product_type import ProductTypeCreate, ProductTypeSchema, ProductTypeUpdate
 from app.services.admin import AdminService
 
@@ -89,6 +91,39 @@ async def list_inventory(
     return await service.list_inventory(low_stock_only=low_stock_only, page=page, page_size=page_size)
 
 
+@router.get("/products", response_model=PaginatedResponse[ProductList], dependencies=[require_inventory])
+async def list_products_admin(
+    search: Optional[str] = Query(None),
+    product_type: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    is_featured: Optional[bool] = Query(None),
+    low_stock: Optional[bool] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[ProductList]:
+    repo = ProductRepository(db)
+    offset = (page - 1) * page_size
+    items, total = await repo.list_admin(
+        search=search,
+        product_type=product_type,
+        category_slug=category,
+        is_active=is_active,
+        is_featured=is_featured,
+        low_stock=low_stock,
+        offset=offset,
+        limit=page_size,
+    )
+    return PaginatedResponse(
+        items=[ProductList.model_validate(p) for p in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, -(-total // page_size)),
+    )
+
+
 @router.get("/products/{product_id}", response_model=ProductDetail, dependencies=[require_inventory])
 async def get_product(
     product_id: int,
@@ -129,6 +164,70 @@ async def update_stock(
     service: AdminService = Depends(get_admin_service),
 ) -> dict:
     return await service.update_stock(product_id, data)
+
+
+# ── Color Variants ─────────────────────────────────────────────────────────────
+
+@router.get(
+    "/products/{product_id}/variants",
+    response_model=List[FilamentVariantSchema],
+    dependencies=[require_inventory],
+)
+async def list_variants(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> List[FilamentVariantSchema]:
+    repo = FilamentVariantRepository(db)
+    return list(await repo.list_by_product(product_id))
+
+
+@router.post(
+    "/products/{product_id}/variants",
+    response_model=FilamentVariantSchema,
+    status_code=201,
+    dependencies=[require_inventory],
+)
+async def create_variant(
+    product_id: int,
+    data: VariantCreate,
+    db: AsyncSession = Depends(get_db),
+) -> FilamentVariantSchema:
+    repo = FilamentVariantRepository(db)
+    return await repo.create(product_id, **data.model_dump())
+
+
+@router.patch(
+    "/variants/{variant_id}",
+    response_model=FilamentVariantSchema,
+    dependencies=[require_inventory],
+)
+async def update_variant(
+    variant_id: int,
+    data: VariantUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> FilamentVariantSchema:
+    repo = FilamentVariantRepository(db)
+    variant = await repo.get_by_id(variant_id)
+    if not variant:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    return await repo.update(variant, **updates)
+
+
+@router.delete(
+    "/variants/{variant_id}",
+    status_code=204,
+    dependencies=[require_inventory],
+)
+async def delete_variant(
+    variant_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    repo = FilamentVariantRepository(db)
+    variant = await repo.get_by_id(variant_id)
+    if not variant:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    await repo.delete(variant)
 
 
 # ── Categories ────────────────────────────────────────────────────────────────

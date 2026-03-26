@@ -64,16 +64,16 @@ export function ProductDetailClient({ product }: Props) {
           </p>
         )}
 
-        {/* Filament variants */}
-        {product.product_type === "filament" &&
-          product.filament_variants.length > 0 && (
-            <div className="mb-6">
-              <FilamentVariants
-                variants={product.filament_variants}
-                onVariantChange={setSelectedVariant}
-              />
-            </div>
-          )}
+        {/* Color variants — shown for any product type that has them */}
+        {product.filament_variants.length > 0 && (
+          <div className="mb-6">
+            <FilamentVariants
+              variants={product.filament_variants}
+              onVariantChange={setSelectedVariant}
+              basePrice={product.price}
+            />
+          </div>
+        )}
 
         {/* Add to cart */}
         <AddToCart product={product} selectedVariant={selectedVariant} />

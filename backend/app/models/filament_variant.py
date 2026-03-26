@@ -23,6 +23,7 @@ class FilamentVariant(Base):
     diameter_mm: Mapped[Optional[float]] = mapped_column(Numeric(3, 2), default=1.75)
     weight_grams: Mapped[Optional[int]] = mapped_column(Integer)
     price_delta: Mapped[float] = mapped_column(Numeric(10, 2), default=0.00, nullable=False)
+    variant_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))  # overrides base price when set
     sku: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     stock_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     image_url: Mapped[Optional[str]] = mapped_column(String(512))  # color-specific image

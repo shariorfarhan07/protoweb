@@ -1,0 +1,77 @@
+# Production compose — uses pre-built images from ghcr.io (set by CI)
+# Do NOT use this file locally; use docker-compose.yml for local dev.
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prototypebd
+      POSTGRES_USER: prototypebd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prototypebd -d prototypebd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/your-org/prototypebd-backend:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://prototypebd:${POSTGRES_PASSWORD}@db:5432/prototypebd
+      ALLOWED_ORIGINS: '["https://prototypebd.com"]'
+      API_PREFIX: /api/v1
+    volumes:
+      - backend_static:/app/static
+    networks:
+      - internal
+      - proxy
+    expose:
+      - "8000"
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/your-org/prototypebd-frontend:latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      PORT: 3000
+    networks:
+      - proxy
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - backend_static:/srv/static:ro
+    networks:
+      - proxy
+
+volumes:
+  postgres_data:
+  backend_static:
+
+networks:
+  internal:
+  proxy:

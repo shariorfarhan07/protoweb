@@ -16,6 +16,7 @@ export interface FilamentVariantSchema {
   diameter_mm: number | null;
   weight_grams: number | null;
   price_delta: number;
+  variant_price: number | null; // absolute price override; null = use product.price + price_delta
   sku: string | null;
   stock_qty: number;
   image_url: string | null;
@@ -176,6 +177,71 @@ export interface ProductTypeSchema {
   value: string;
   label: string;
   is_active: boolean;
+}
+
+// ── Color Variants ───────────────────────────────────────────────────────────
+
+export interface VariantCreate {
+  color_name: string;
+  color_hex: string;
+  material?: string | null;
+  diameter_mm?: number | null;
+  weight_grams?: number | null;
+  price_delta?: number;
+  variant_price?: number | null;
+  sku?: string | null;
+  stock_qty?: number;
+  image_url?: string | null;
+  is_active?: boolean;
+}
+
+export interface VariantUpdate {
+  color_name?: string;
+  color_hex?: string;
+  material?: string | null;
+  diameter_mm?: number | null;
+  weight_grams?: number | null;
+  price_delta?: number;
+  variant_price?: number | null;
+  sku?: string | null;
+  stock_qty?: number;
+  image_url?: string | null;
+  is_active?: boolean;
+}
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+export interface ReviewOut {
+  id: number;
+  reviewer_name: string;
+  reviewer_title: string | null;
+  avatar_url: string | null;
+  rating: number;
+  content: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewCreate {
+  reviewer_name: string;
+  reviewer_title?: string | null;
+  avatar_url?: string | null;
+  rating: number;
+  content: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface ReviewUpdate {
+  reviewer_name?: string;
+  reviewer_title?: string | null;
+  avatar_url?: string | null;
+  rating?: number;
+  content?: string;
+  is_active?: boolean;
+  sort_order?: number;
 }
 
 // Cart types (client-side only)

@@ -78,6 +78,7 @@ class FilamentVariantSchema(BaseModel):
     diameter_mm: Optional[float] = None
     weight_grams: Optional[int] = None
     price_delta: float = 0.0
+    variant_price: Optional[float] = None  # absolute price override; takes priority over price_delta
     sku: Optional[str] = None
     stock_qty: int = 0
     image_url: Optional[str] = None

@@ -1,5 +1,5 @@
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8888";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,13 +10,19 @@ const nextConfig = {
       {
         protocol: "http",
         hostname: "localhost",
-        port: "8000",
+        port: "8888",
       },
       // Relative URLs served via the Next.js /static rewrite proxy below
       {
         protocol: "http",
         hostname: "localhost",
         port: "3000",
+        pathname: "/static/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "5555",
         pathname: "/static/**",
       },
     ],
