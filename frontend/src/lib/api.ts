@@ -18,8 +18,13 @@ import type {
   VariantUpdate,
 } from "./api-types";
 
+// Server-side (Node.js in container) uses INTERNAL_API_URL so it reaches
+// the backend service by Docker DNS name instead of localhost.
+// Browser-side always uses the public NEXT_PUBLIC_API_URL.
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  typeof window === "undefined"
+    ? (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1")
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1");
 
 // ISR revalidation period (seconds)
 const REVALIDATE_PRODUCTS = 60;

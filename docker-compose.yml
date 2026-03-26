@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: sqlite+aiosqlite:////app/data/prototypebd.db
-      ALLOWED_ORIGINS: '["https://prototypebd.com","http://localhost:5555","http://localhost:8888"]'
+      ALLOWED_ORIGINS: '["http://localhost:5555","http://localhost:8888"]'
       API_PREFIX: /api/v1
     volumes:
       - backend_static:/app/static
@@ -16,6 +16,12 @@ services:
       - proxy
     ports:
       - "8888:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/categories')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ── Next.js frontend ────────────────────────────────────────────────────────
   frontend:
@@ -23,15 +29,23 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        # Baked into the JS bundle — used by the browser
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8888/api/v1}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:5555}
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
+      # Browser-facing (matches build args)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8888/api/v1}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:5555}
+      # Server-side only — used inside the container where "backend" resolves via Docker DNS
+      INTERNAL_API_URL: http://backend:8000/api/v1
+      BACKEND_URL: http://backend:8000
       PORT: 3000
+    volumes:
+      - backend_static:/app/static:ro
     networks:
       - proxy
     ports:
@@ -42,4 +56,4 @@ volumes:
   sqlite_data:
 
 networks:
-  proxy:      # nginx ↔ backend + frontend
+  proxy:
