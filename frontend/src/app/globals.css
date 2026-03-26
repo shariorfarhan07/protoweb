@@ -116,6 +116,29 @@ img {
   border-radius: 6px;
 }
 
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.footer-social {
+  background: #1e1e1e;
+  color: #888;
+}
+.footer-social:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.footer-email-input {
+  background: #1e1e1e;
+  border: 1.5px solid #2a2a2a;
+  color: #ddd;
+  transition: border-color 0.2s;
+}
+.footer-email-input:focus {
+  border-color: #ff8c42;
+}
+.footer-email-input::placeholder {
+  color: #555;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    HERO CAROUSEL — responsive
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -331,4 +354,26 @@ img {
   .hero-arrow-right { right: 10px; }
 
   .hero-counter { display: none; }
+}
+
+/* ── Ping keyframe (contact hero live badge) ────────────────────────────── */
+@keyframes ping {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+/* ── Contact form inputs ─────────────────────────────────────────────────── */
+.contact-input {
+  background: #fafaf8;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  color: #111;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.contact-input::placeholder {
+  color: #bbb;
+}
+.contact-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #fff;
 }

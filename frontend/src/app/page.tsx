@@ -3,6 +3,7 @@ import Link from "next/link";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import ReviewsCarousel from "@/components/home/ReviewsCarousel";
+import { NewsletterSection } from "@/components/home/NewsletterSection";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { getCategories, getFeaturedProducts, getProducts, getReviews } from "@/lib/api";
 import type { CategorySchema, ProductList, ReviewOut } from "@/lib/api-types";
@@ -148,6 +149,7 @@ export default async function HomePage() {
       ))}
 
       {/* Customer Reviews */}
+      <NewsletterSection />
       <ReviewsCarousel reviews={reviews} />
       <ReviewsJsonLd reviews={reviews} />
     </>

@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
   { href: "/compare", label: "Compare" },
   { href: "#about", label: "About" },
+  { href: "/contact-us", label: "Contact" },
 ];
 
 export function Navbar() {
@@ -19,9 +20,12 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const totalItems = useCartStore((s) => s.totalItems());
   const toggleCart = useCartStore((s) => s.toggleCart);
+
+  useEffect(() => { setMounted(true); }, []);
 
   function openSearch() {
     setMenuOpen(false);
@@ -325,7 +329,7 @@ export function Navbar() {
             <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
           <span className="hidden sm:inline">Cart</span>
-          {totalItems > 0 && (
+          {mounted && totalItems > 0 && (
             <span
               className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-white"
               style={{ width: 18, height: 18, fontSize: 10, fontWeight: 700, background: "#e53e3e" }}
