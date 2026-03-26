@@ -7,7 +7,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: sqlite+aiosqlite:////app/data/prototypebd.db
-      ALLOWED_ORIGINS: '["http://localhost:5555","http://localhost:8888"]'
+      # All origins that may send requests to the API (localhost + public host)
+      ALLOWED_ORIGINS: >-
+        ["http://localhost:5555","http://localhost:8888","http://${SERVER_HOST}:5555","http://${SERVER_HOST}:8888"]
       API_PREFIX: /api/v1
     volumes:
       - backend_static:/app/static
@@ -29,18 +31,17 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Baked into the JS bundle — used by the browser
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8888/api/v1}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:5555}
+        # Baked into the JS bundle — must be the public address the browser will use
+        NEXT_PUBLIC_API_URL: http://${SERVER_HOST}:8888/api/v1
+        NEXT_PUBLIC_SITE_URL: http://${SERVER_HOST}:5555
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     environment:
-      # Browser-facing (matches build args)
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8888/api/v1}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:5555}
-      # Server-side only — used inside the container where "backend" resolves via Docker DNS
+      NEXT_PUBLIC_API_URL: http://${SERVER_HOST}:8888/api/v1
+      NEXT_PUBLIC_SITE_URL: http://${SERVER_HOST}:5555
+      # Server-side only — reaches backend via Docker internal DNS, not public IP
       INTERNAL_API_URL: http://backend:8000/api/v1
       BACKEND_URL: http://backend:8000
       PORT: 3000
