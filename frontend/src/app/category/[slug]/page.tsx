@@ -30,7 +30,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!cat) notFound();
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-10">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-gray-400 mb-6" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-gray-700">Home</Link>

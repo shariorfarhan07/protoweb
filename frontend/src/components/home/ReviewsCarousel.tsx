@@ -3,12 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReviewOut } from "@/lib/api-types";
 
-const PER_VIEW = 3;
-const SLIDE_INTERVAL = 3500; // ms between auto-slides
+const SLIDE_INTERVAL = 3500;
 const TRANSITION = "transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
 
 interface Props {
   reviews: ReviewOut[];
+}
+
+function usePerView() {
+  const [perView, setPerView] = useState(3);
+  useEffect(() => {
+    function update() {
+      if (window.innerWidth < 640) setPerView(1);
+      else if (window.innerWidth < 1024) setPerView(2);
+      else setPerView(3);
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return perView;
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -47,23 +61,15 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
 function ReviewCard({ review }: { review: ReviewOut }) {
   return (
     <article className="bg-white rounded-2xl shadow-sm px-6 py-7 flex flex-col h-full">
-      <div className="mb-3">
-        <StarRating rating={review.rating} />
-      </div>
+      <div className="mb-3"><StarRating rating={review.rating} /></div>
       <blockquote className="flex-1 mb-5">
-        <p className="text-gray-600 leading-relaxed text-sm">
-          &ldquo;{review.content}&rdquo;
-        </p>
+        <p className="text-gray-600 leading-relaxed text-sm">&ldquo;{review.content}&rdquo;</p>
       </blockquote>
       <footer className="flex items-center gap-3 pt-4 border-t border-gray-50">
         <Avatar name={review.reviewer_name} url={review.avatar_url} />
         <div>
-          <cite className="not-italic font-semibold text-gray-900 text-sm block">
-            {review.reviewer_name}
-          </cite>
-          {review.reviewer_title && (
-            <span className="text-gray-400 text-xs">{review.reviewer_title}</span>
-          )}
+          <cite className="not-italic font-semibold text-gray-900 text-sm block">{review.reviewer_name}</cite>
+          {review.reviewer_title && <span className="text-gray-400 text-xs">{review.reviewer_title}</span>}
         </div>
       </footer>
     </article>
@@ -72,39 +78,41 @@ function ReviewCard({ review }: { review: ReviewOut }) {
 
 export default function ReviewsCarousel({ reviews }: Props) {
   const n = reviews.length;
+  const perView = usePerView();
 
-  // Build infinite track: clone last PER_VIEW before + clone first PER_VIEW after
-  const cloneBefore = reviews.slice(-PER_VIEW);
-  const cloneAfter  = reviews.slice(0, PER_VIEW);
+  // Rebuild when perView changes
+  const cloneBefore = reviews.slice(-perView);
+  const cloneAfter  = reviews.slice(0, perView);
   const items = [...cloneBefore, ...reviews, ...cloneAfter];
-  // Real reviews occupy indices PER_VIEW … PER_VIEW+n-1
 
-  const [idx, setIdx]       = useState(PER_VIEW); // start at first real review
-  const [instant, setInstant] = useState(false);   // true = no transition (snap)
+  const [idx, setIdx]       = useState(perView);
+  const [instant, setInstant] = useState(false);
   const idxRef   = useRef(idx);
   const pauseRef = useRef(false);
   idxRef.current = idx;
 
-  // Silently jump to the mirrored real position after crossing a clone boundary
+  // Reset position when perView changes to avoid mis-alignment
+  useEffect(() => {
+    setInstant(true);
+    setIdx(perView);
+    requestAnimationFrame(() => requestAnimationFrame(() => setInstant(false)));
+  }, [perView]);
+
+  // Touch swipe
+  const touchStartX = useRef<number | null>(null);
+
   function jumpTo(newIdx: number) {
     setInstant(true);
     setIdx(newIdx);
-    // Re-enable transition after the browser has painted the jump
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => setInstant(false))
-    );
+    requestAnimationFrame(() => requestAnimationFrame(() => setInstant(false)));
   }
 
   function handleTransitionEnd() {
     const cur = idxRef.current;
-    if (cur < PER_VIEW) {
-      jumpTo(cur + n);           // slid left past clone-before → snap to real end
-    } else if (cur >= PER_VIEW + n) {
-      jumpTo(cur - n);           // slid right past clone-after  → snap to real start
-    }
+    if (cur < perView)          jumpTo(cur + n);
+    else if (cur >= perView + n) jumpTo(cur - n);
   }
 
-  // Auto-slide
   useEffect(() => {
     const timer = setInterval(() => {
       if (!pauseRef.current) setIdx((i) => i + 1);
@@ -115,23 +123,16 @@ export default function ReviewsCarousel({ reviews }: Props) {
   if (n === 0) return null;
 
   const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / n).toFixed(1);
+  const activeDot = ((idx - perView) % n + n) % n;
 
-  // Active dot: which real review is the leftmost visible one
-  const activeDot = ((idx - PER_VIEW) % n + n) % n;
-
-  // Translate: each slot = 100% / PER_VIEW of container. Shift by idx slots.
-  // Track width = items.length / PER_VIEW * 100% of container.
-  // translateX(%) is relative to the element itself (the track).
-  // So: shift = idx * (containerW / PER_VIEW) = idx * (trackW / items.length)
-  // As % of track: idx / items.length * 100%
-  const trackWidthPct = (items.length / PER_VIEW) * 100; // % relative to container
-  const translatePct  = (idx / items.length) * 100;       // % relative to track
+  const trackWidthPct = (items.length / perView) * 100;
+  const translatePct  = (idx / items.length) * 100;
 
   return (
     <section
       aria-label={`Customer reviews — ${avgRating} average rating from ${n} customers`}
       style={{ background: "linear-gradient(135deg, #f9f9f7 0%, #f0ede8 100%)" }}
-      className="px-6 md:px-12 py-20"
+      className="px-4 md:px-12 py-16 md:py-20"
     >
       {/* SEO: all reviews in DOM, visually hidden */}
       <ol className="sr-only" aria-label="All customer reviews">
@@ -165,13 +166,19 @@ export default function ReviewsCarousel({ reviews }: Props) {
 
       {/* Carousel viewport */}
       <div className="relative max-w-6xl mx-auto">
-        {/* Overflow mask — negative margin compensates for card padding */}
         <div
-          style={{ overflow: "hidden", margin: "0 -10px" }}
+          style={{ overflow: "hidden", margin: "0 -8px" }}
           onMouseEnter={() => { pauseRef.current = true; }}
           onMouseLeave={() => { pauseRef.current = false; }}
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; pauseRef.current = true; }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const diff = touchStartX.current - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 40) setIdx((i) => i + (diff > 0 ? 1 : -1));
+            touchStartX.current = null;
+            pauseRef.current = false;
+          }}
         >
-          {/* Sliding track */}
           <div
             style={{
               display: "flex",
@@ -189,7 +196,7 @@ export default function ReviewsCarousel({ reviews }: Props) {
                 style={{
                   width: `${100 / items.length}%`,
                   flexShrink: 0,
-                  padding: "0 10px",
+                  padding: "0 8px",
                   boxSizing: "border-box",
                 }}
               >
@@ -203,9 +210,9 @@ export default function ReviewsCarousel({ reviews }: Props) {
         <button
           onClick={() => setIdx((i) => i - 1)}
           aria-label="Previous review"
-          className="absolute top-1/2 -translate-y-1/2 -left-5 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
+          className="absolute top-1/2 -translate-y-1/2 -left-4 md:-left-5 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
@@ -214,19 +221,19 @@ export default function ReviewsCarousel({ reviews }: Props) {
         <button
           onClick={() => setIdx((i) => i + 1)}
           aria-label="Next review"
-          className="absolute top-1/2 -translate-y-1/2 -right-5 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
+          className="absolute top-1/2 -translate-y-1/2 -right-4 md:-right-5 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
 
-        {/* Dot indicators — one per review */}
+        {/* Dot indicators */}
         <div className="flex justify-center gap-1.5 mt-7" role="tablist" aria-label="Review navigation">
           {reviews.map((_, i) => (
             <button
               key={i}
-              onClick={() => setIdx(PER_VIEW + i)}
+              onClick={() => setIdx(perView + i)}
               role="tab"
               aria-selected={i === activeDot}
               aria-label={`Go to review ${i + 1}`}

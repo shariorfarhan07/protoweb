@@ -16,7 +16,7 @@ const FALLBACK_GRADIENTS = [
 
 export function CategoryGrid({ categories }: CategoryGridProps) {
   return (
-    <section className="px-12 pb-16">
+    <section className="px-4 md:px-12 pb-16">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2
@@ -34,11 +34,8 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         </Link>
       </div>
 
-      {/* Grid */}
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
-      >
+      {/* Grid: 2 cols on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {categories.map((cat, idx) => (
           <Link
             key={cat.id}

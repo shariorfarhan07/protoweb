@@ -27,8 +27,8 @@ export default function ComparePage() {
   }, [ids]);
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
           <h1 className="font-black text-3xl mb-1" style={{ letterSpacing: -1 }}>
             Compare Products

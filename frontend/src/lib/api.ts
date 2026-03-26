@@ -84,6 +84,7 @@ export interface ProductFilters {
   max_price?: number;
   material?: string;
   featured?: boolean;
+  search?: string;
   page?: number;
   page_size?: number;
 }

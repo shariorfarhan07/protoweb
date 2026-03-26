@@ -9,7 +9,7 @@ export default function CartPage() {
   const { items, totalPrice } = useCartStore();
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
+    <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10">
       <h1 className="font-black text-3xl mb-8" style={{ letterSpacing: -1 }}>
         Cart
       </h1>

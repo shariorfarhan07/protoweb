@@ -71,10 +71,10 @@ export default async function ProductPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="max-w-7xl mx-auto px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
         {/* Breadcrumb */}
         <nav
-          className="flex items-center gap-2 text-xs text-gray-400 mb-8"
+          className="flex items-center gap-2 text-xs text-gray-400 mb-6 md:mb-8 flex-wrap"
           aria-label="Breadcrumb"
         >
           <Link href="/" className="hover:text-gray-700">Home</Link>
@@ -121,12 +121,12 @@ export default async function ProductPage({ params }: Props) {
                     }}
                   >
                     <dt
-                      className="w-1/3 py-3.5 px-5 font-medium text-sm text-gray-500"
+                      className="w-2/5 md:w-1/3 py-3 md:py-3.5 px-4 md:px-5 font-medium text-sm text-gray-500"
                       style={{ background: "rgba(0,0,0,0.02)" }}
                     >
                       {key}
                     </dt>
-                    <dd className="py-3.5 px-5 text-sm flex-1">{val}</dd>
+                    <dd className="py-3 md:py-3.5 px-4 md:px-5 text-sm flex-1">{val}</dd>
                   </div>
                 ))}
               </div>

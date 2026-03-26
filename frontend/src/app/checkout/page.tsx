@@ -31,7 +31,7 @@ export default function CheckoutPage() {
 
   if (items.length === 0 && !submitted) {
     return (
-      <div className="max-w-5xl mx-auto px-8 py-10 text-center">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10 text-center">
         <p className="text-5xl mb-4">🛒</p>
         <p className="font-semibold text-lg mb-4">Your cart is empty</p>
         <Link href="/shop" className="btn-pill" style={{ fontSize: 13 }}>
@@ -43,7 +43,7 @@ export default function CheckoutPage() {
 
   if (submitted) {
     return (
-      <div className="max-w-5xl mx-auto px-8 py-10 text-center">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10 text-center">
         <p className="text-5xl mb-4">✅</p>
         <p className="font-black text-2xl mb-2">Order Placed!</p>
         {orderNumber && (
@@ -119,8 +119,8 @@ export default function CheckoutPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
-      <h1 className="font-black text-3xl mb-8" style={{ letterSpacing: -1 }}>
+    <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <h1 className="font-black text-3xl mb-6 md:mb-8" style={{ letterSpacing: -1 }}>
         Checkout
       </h1>
 
@@ -138,9 +138,9 @@ export default function CheckoutPage() {
 
           <section>
             <h2 className="font-bold text-lg mb-4">Shipping Information</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {fields.map((f) => (
-                <div key={f.id} style={{ gridColumn: `span ${f.span}` }}>
+                <div key={f.id} className={f.span === 2 ? "sm:col-span-2" : ""}>
                   <label
                     htmlFor={f.id}
                     className="block text-xs font-semibold uppercase mb-1.5"

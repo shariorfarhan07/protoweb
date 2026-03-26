@@ -40,8 +40,8 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
   if (!images.length) {
     return (
       <div
-        className="rounded-card bg-gray-100 flex items-center justify-center shrink-0"
-        style={{ aspectRatio: "1", width: 440 }}
+        className="rounded-card bg-gray-100 flex items-center justify-center w-full lg:w-[440px] shrink-0"
+        style={{ aspectRatio: "1" }}
       >
         <span className="text-gray-300 text-sm">No image</span>
       </div>
@@ -51,7 +51,7 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
   const active = images[activeIdx];
 
   return (
-    <div className="flex flex-col gap-3 shrink-0" style={{ width: 440 }}>
+    <div className="flex flex-col gap-3 w-full lg:w-[440px] shrink-0">
       {/* ── Main image ── */}
       <div
         className="relative rounded-card overflow-hidden select-none"
@@ -63,7 +63,7 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
           alt={active.alt_text ?? name}
           fill
           className="object-contain p-8 transition-opacity duration-200"
-          sizes="440px"
+          sizes="(max-width: 1023px) 100vw, 440px"
           priority
           unoptimized
         />
