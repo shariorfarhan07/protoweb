@@ -29,7 +29,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
   const initials = name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const hue = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  const hue = Array.from(name).reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
   if (url) {
     return <img src={url} alt={name} width={44} height={44} className="w-11 h-11 rounded-full object-cover ring-2 ring-white flex-shrink-0" />;
   }
