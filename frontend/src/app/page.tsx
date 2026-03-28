@@ -81,7 +81,7 @@ function ProductSection({
   );
 }
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "PrototypeBD — 3D Printers, Laser Engravers & Filament in Bangladesh",

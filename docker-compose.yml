@@ -34,6 +34,9 @@ services:
         # Baked into the JS bundle — must be the public address the browser will use
         NEXT_PUBLIC_API_URL: http://${SERVER_HOST}:8888/api/v1
         NEXT_PUBLIC_SITE_URL: http://${SERVER_HOST}:5555
+        # Internal Docker DNS — used by next.config.mjs rewrite and server-side fetches
+        BACKEND_URL: http://backend:8000
+        INTERNAL_API_URL: http://backend:8000/api/v1
     restart: unless-stopped
     depends_on:
       backend:

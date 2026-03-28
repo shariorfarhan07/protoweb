@@ -14,6 +14,12 @@ ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
+# Internal service URLs — used by next.config.mjs rewrites and server-side fetches
+ARG BACKEND_URL=http://backend:8000
+ARG INTERNAL_API_URL=http://backend:8000/api/v1
+ENV BACKEND_URL=$BACKEND_URL
+ENV INTERNAL_API_URL=$INTERNAL_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

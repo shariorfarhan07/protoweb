@@ -1,10 +1,12 @@
 """
 Seed script — populates the database with sample data for PrototypeBD.
 Run: python seed.py
+Skips seeding if categories already exist (idempotent).
 """
 import asyncio
-import json
+import os
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.models.base import Base
@@ -14,7 +16,7 @@ from app.models.filament_variant import FilamentVariant
 from app.models.product import Product
 from app.models.product_image import ProductImage
 
-DATABASE_URL = "sqlite+aiosqlite:///./prototypebd.db"
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./prototypebd.db")
 
 engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -25,6 +27,12 @@ async def seed():
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
+        # Skip if already seeded
+        existing = (await session.execute(select(Category))).scalars().first()
+        if existing:
+            print("Database already seeded — skipping.")
+            return
+
         # ── Categories ────────────────────────────────────────────────────────
         cat_printer = Category(
             name="3D Printers",
