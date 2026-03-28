@@ -588,7 +588,7 @@ export async function adminDeleteVariant(variantId: number): Promise<void> {
 // ── Reviews ───────────────────────────────────────────────────────────────────
 
 export async function getReviews(): Promise<ReviewOut[]> {
-  return apiFetch("/reviews", { cache: "no-store" });
+  return apiFetch("/reviews", { next: { revalidate: REVALIDATE_STATIC } });
 }
 
 export async function adminListReviews(): Promise<ReviewOut[]> {

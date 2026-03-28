@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FilterSidebar } from "@/components/shop/FilterSidebar";
 import { ProductGrid } from "@/components/shop/ProductGrid";
@@ -20,7 +20,7 @@ interface Filters {
   search?: string;
 }
 
-export default function ShopPage() {
+function ShopContent() {
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<Filters>(() => {
@@ -170,5 +170,13 @@ export default function ShopPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense>
+      <ShopContent />
+    </Suspense>
   );
 }
