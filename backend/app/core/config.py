@@ -3,7 +3,12 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:5555", "http://localhost:8888"]
+_DEFAULT_ORIGINS = [
+    "http://localhost:3333",
+    "http://localhost:3000",
+    "http://localhost:5555",
+    "http://localhost:8888",
+]
 
 # Anchor the SQLite file to the backend project root (this file lives at
 # backend/app/core/config.py) so the DB resolves the same regardless of the
