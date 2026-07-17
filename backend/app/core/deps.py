@@ -72,6 +72,28 @@ def require_role(*roles: str):
     return Depends(_check)
 
 
-require_admin = require_role("admin", "super_admin")
-require_super_admin = require_role("super_admin")
-require_inventory = require_role("admin", "super_admin", "inventory_manager")
+def require_permission(*keys: str):
+    """Allow the request only if the user's role grants at least one of ``keys``.
+
+    Permissions are resolved from the DB on every request (superuser roles imply
+    all permissions), so role/permission changes take effect immediately without
+    needing the user to re-login.
+    """
+    async def _check(
+        current_user=Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ):
+        from app.services.rbac import RbacService
+
+        granted = await RbacService(db).user_permissions(current_user)
+        if not any(k in granted for k in keys):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+
+    return Depends(_check)
+
+
+# Backward-compatible aliases, now backed by permissions.
+require_admin = require_permission("admin.access")
+require_super_admin = require_permission("roles.manage")
+require_inventory = require_permission("products.manage")

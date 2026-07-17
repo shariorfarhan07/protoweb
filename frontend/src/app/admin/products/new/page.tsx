@@ -52,6 +52,9 @@ export default function NewProductPage() {
   const [comparePrice, setComparePrice] = useState("");
   const [sku, setSku] = useState("");
   const [stockQty, setStockQty] = useState("0");
+  const [reorderLevel, setReorderLevel] = useState("5");
+  const [preorderEnabled, setPreorderEnabled] = useState(false);
+  const [preorderPrice, setPreorderPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [brandId, setBrandId] = useState("");
   const [shortDesc, setShortDesc] = useState("");
@@ -98,6 +101,9 @@ export default function NewProductPage() {
         name: name.trim(), product_type: productType, price: Number(price),
         compare_price: comparePrice ? Number(comparePrice) : undefined,
         sku: sku.trim() || undefined, stock_qty: Number(stockQty) || 0,
+        reorder_level: Number(reorderLevel) || 0,
+        preorder_enabled: preorderEnabled,
+        preorder_price: preorderEnabled && preorderPrice ? Number(preorderPrice) : null,
         category_id: categoryId ? Number(categoryId) : undefined,
         brand_id: brandId ? Number(brandId) : undefined,
         short_desc: shortDesc.trim() || undefined, long_desc: longDesc || undefined,
@@ -175,7 +181,7 @@ export default function NewProductPage() {
 
         {/* Pricing & Stock */}
         <Section title="Pricing & Stock">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Price (৳)" required>
               <input type="number" required min={0} value={price} onChange={(e) => setPrice(e.target.value)}
                 placeholder="95000" className={inputCls} style={inputStyle} />
@@ -188,12 +194,35 @@ export default function NewProductPage() {
               <input type="number" min={0} value={stockQty} onChange={(e) => setStockQty(e.target.value)}
                 className={inputCls} style={inputStyle} />
             </Field>
+            <Field label="Reorder Level">
+              <input type="number" min={0} value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)}
+                placeholder="5" className={inputCls} style={inputStyle} />
+            </Field>
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
             <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="rounded" />
             Mark as featured (shows on homepage)
           </label>
+
+          {/* Preorder */}
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 18 }}>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
+              <input type="checkbox" checked={preorderEnabled} onChange={(e) => setPreorderEnabled(e.target.checked)} className="rounded" />
+              Allow preorder when out of stock
+            </label>
+            {preorderEnabled && (
+              <div className="mt-4" style={{ maxWidth: 220 }}>
+                <Field label="Preorder Price (৳)">
+                  <input type="number" min={0} value={preorderPrice} onChange={(e) => setPreorderPrice(e.target.value)}
+                    placeholder="Defaults to regular price" className={inputCls} style={inputStyle} />
+                </Field>
+                <p style={{ fontSize: 11.5, color: "#aaa", marginTop: 6 }}>
+                  Charged for preorders while stock is 0. Leave blank to use the regular price.
+                </p>
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* Images */}

@@ -22,7 +22,10 @@
       "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
       "Bash(npm --version)",
       "Bash(python3:*)",
-      "Bash(find c:UsersShariorfarhanDesktopPrototypebd -name *router* -o -name main.py)"
+      "Bash(find c:UsersShariorfarhanDesktopPrototypebd -name *router* -o -name main.py)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npx playwright *)"
     ]
   }
 }

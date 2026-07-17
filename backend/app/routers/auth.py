@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.repositories.user import UserRepository
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserPublic
-from app.services.auth import AuthService
+from app.services.auth import AuthService, build_user_public
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,5 +37,8 @@ async def logout(response: Response) -> dict:
 
 
 @router.get("/me", response_model=UserPublic)
-async def me(current_user=Depends(get_current_user)) -> UserPublic:
-    return UserPublic.model_validate(current_user)
+async def me(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserPublic:
+    return await build_user_public(current_user, db)

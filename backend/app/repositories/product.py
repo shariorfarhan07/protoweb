@@ -152,6 +152,27 @@ class ProductRepository(BaseRepository[Product]):
         result = (await self.session.execute(q)).scalars().unique().all()
         return result, total
 
+    async def list_low_stock(self, limit: int = 50) -> list[Product]:
+        """Active products at or below their reorder level, neediest first.
+
+        Ordered by the stock-to-reorder gap (most depleted first), then raw qty,
+        so out-of-stock and critical items surface at the top.
+        """
+        q = (
+            select(Product)
+            .where(
+                Product.is_active == True,
+                Product.stock_qty <= Product.reorder_level,
+            )
+            .options(selectinload(Product.category), selectinload(Product.brand))
+            .order_by(
+                (Product.stock_qty - Product.reorder_level).asc(),
+                Product.stock_qty.asc(),
+            )
+            .limit(limit)
+        )
+        return list((await self.session.execute(q)).scalars().unique().all())
+
     async def get_featured(self, limit: int = 8) -> list[Product]:
         q = (
             select(Product)

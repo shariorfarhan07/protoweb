@@ -57,6 +57,9 @@ export default function EditProductPage() {
   const [comparePrice, setComparePrice] = useState("");
   const [sku, setSku] = useState("");
   const [stockQty, setStockQty] = useState("0");
+  const [reorderLevel, setReorderLevel] = useState("5");
+  const [preorderEnabled, setPreorderEnabled] = useState(false);
+  const [preorderPrice, setPreorderPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [brandId, setBrandId] = useState("");
   const [shortDesc, setShortDesc] = useState("");
@@ -97,6 +100,9 @@ export default function EditProductPage() {
     setName(p.name); setProductType(p.product_type); setPrice(String(p.price));
     setComparePrice(p.compare_price != null ? String(p.compare_price) : "");
     setSku(p.sku ?? ""); setStockQty(String(p.stock_qty));
+    setReorderLevel(String(p.reorder_level ?? 5));
+    setPreorderEnabled(p.preorder_enabled ?? false);
+    setPreorderPrice(p.preorder_price != null ? String(p.preorder_price) : "");
     const matchedCat = p.category ? cats.find((c) => c.slug === p.category!.slug) : null;
     const matchedBrand = p.brand ? brs.find((b) => b.slug === p.brand!.slug) : null;
     setCategoryId(matchedCat ? String(matchedCat.id) : "");
@@ -122,6 +128,9 @@ export default function EditProductPage() {
         name: name.trim(), product_type: productType, price: Number(price),
         compare_price: comparePrice ? Number(comparePrice) : undefined,
         sku: sku.trim() || undefined, stock_qty: Number(stockQty) || 0,
+        reorder_level: Number(reorderLevel) || 0,
+        preorder_enabled: preorderEnabled,
+        preorder_price: preorderEnabled && preorderPrice ? Number(preorderPrice) : null,
         category_id: categoryId ? Number(categoryId) : undefined,
         brand_id: brandId ? Number(brandId) : undefined,
         short_desc: shortDesc.trim() || undefined, long_desc: longDesc || undefined,
@@ -223,7 +232,7 @@ export default function EditProductPage() {
 
         {/* Pricing & Stock */}
         <Section title="Pricing & Stock">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Price (৳)" required>
               <input type="number" required min={0} value={price} onChange={(e) => setPrice(e.target.value)}
                 className={inputCls} style={inputStyle} />
@@ -234,6 +243,10 @@ export default function EditProductPage() {
             </Field>
             <Field label="Stock Qty">
               <input type="number" min={0} value={stockQty} onChange={(e) => setStockQty(e.target.value)}
+                className={inputCls} style={inputStyle} />
+            </Field>
+            <Field label="Reorder Level">
+              <input type="number" min={0} value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)}
                 className={inputCls} style={inputStyle} />
             </Field>
           </div>
@@ -248,6 +261,25 @@ export default function EditProductPage() {
                 {label}
               </label>
             ))}
+          </div>
+
+          {/* Preorder */}
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 18 }}>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
+              <input type="checkbox" checked={preorderEnabled} onChange={(e) => setPreorderEnabled(e.target.checked)} className="rounded" />
+              Allow preorder when out of stock
+            </label>
+            {preorderEnabled && (
+              <div className="mt-4" style={{ maxWidth: 220 }}>
+                <Field label="Preorder Price (৳)">
+                  <input type="number" min={0} value={preorderPrice} onChange={(e) => setPreorderPrice(e.target.value)}
+                    placeholder="Defaults to regular price" className={inputCls} style={inputStyle} />
+                </Field>
+                <p style={{ fontSize: 11.5, color: "#aaa", marginTop: 6 }}>
+                  Charged for preorders while stock is 0. Leave blank to use the regular price.
+                </p>
+              </div>
+            )}
           </div>
         </Section>
 

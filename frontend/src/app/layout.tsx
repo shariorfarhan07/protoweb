@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { CompareBar } from "@/components/comparison/CompareBar";
+import { SiteChrome } from "@/components/layout/SiteChrome";
+import { Analytics } from "@/components/analytics/Analytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,7 +31,6 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "PrototypeBD",
-    images: [{ url: "/og-default.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -41,6 +39,10 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to verify Search Console ownership.
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export default function RootLayout({
@@ -51,10 +53,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <Navbar />
-        <main>{children}</main>
-        <CompareBar />
-        <Footer />
+        <Analytics />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

@@ -14,6 +14,19 @@ from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserP
 logger = get_logger("app.services.auth")
 
 
+async def build_user_public(user: User, db) -> UserPublic:
+    """Build a UserPublic enriched with the user's effective RBAC permissions."""
+    from app.services.rbac import RbacService
+
+    rbac = RbacService(db)
+    perms = await rbac.user_permissions(user)
+    is_super = await rbac.is_superuser_role(user.role)
+    public = UserPublic.model_validate(user)
+    public.permissions = sorted(perms)
+    public.is_superuser = is_super
+    return public
+
+
 class AuthService:
     def __init__(self, repo: UserRepository) -> None:
         self.repo = repo
@@ -92,7 +105,7 @@ class AuthService:
         )
         return TokenResponse(
             access_token=access_token,
-            user=UserPublic.model_validate(user),
+            user=await build_user_public(user, self.repo.session),
         )
 
     @staticmethod

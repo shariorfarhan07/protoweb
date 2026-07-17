@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CartItem } from "@/components/cart/CartItem";
 import { useCartStore } from "@/store/cart";
+import { useAuthStore } from "@/store/auth";
 import { formatPrice } from "@/lib/utils";
 
 export default function CartPage() {
   const { items, totalPrice } = useCartStore();
+  const user = useAuthStore((s) => s.user);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const needsLogin = mounted && !user;
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10">
@@ -56,12 +62,17 @@ export default function CartPage() {
                 <span>{formatPrice(totalPrice())}</span>
               </div>
               <Link
-                href="/checkout"
+                href={needsLogin ? "/login?next=/checkout" : "/checkout"}
                 className="btn-pill w-full text-center block mt-6"
                 style={{ fontSize: 14, padding: "14px" }}
               >
-                Proceed to Checkout
+                {needsLogin ? "Sign in to Checkout" : "Proceed to Checkout"}
               </Link>
+              {needsLogin && (
+                <p className="text-xs text-gray-400 text-center mt-3">
+                  An account is required to place an order.
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -48,11 +48,18 @@ class OrderService:
                     detail=f"Product {item_data.product_id} not found",
                 )
 
-            unit_price = float(product.price)
+            # Preorder pricing: when a product is out of stock and preorder is
+            # enabled, charge the admin-set preorder price (falling back to the
+            # regular price if none is configured).
+            is_preorder = product.stock_qty <= 0 and getattr(product, "preorder_enabled", False)
+            if is_preorder and product.preorder_price is not None:
+                unit_price = float(product.preorder_price)
+            else:
+                unit_price = float(product.price)
             subtotal = unit_price * item_data.quantity
             total_price += subtotal
-            logger.debug("  item product_id=%d qty=%d unit_price=%.2f subtotal=%.2f",
-                         product.id, item_data.quantity, unit_price, subtotal)
+            logger.debug("  item product_id=%d qty=%d unit_price=%.2f subtotal=%.2f preorder=%s",
+                         product.id, item_data.quantity, unit_price, subtotal, is_preorder)
 
             order_items.append(
                 OrderItem(

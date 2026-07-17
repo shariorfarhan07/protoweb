@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { NewsletterSignup } from "@/components/layout/NewsletterSignup";
 
 const SHOP_LINKS = [
   { href: "/shop?product_type=printer",  label: "3D Printers",  icon: "🖨️" },
@@ -8,8 +9,17 @@ const SHOP_LINKS = [
   { href: "/shop?product_type=printed",  label: "3D Prints",    icon: "🎨" },
 ];
 
-const SUPPORT_LINKS = ["Contact Us", "Shipping Policy", "Return Policy", "FAQ"];
-const COMPANY_LINKS = ["About", "Blog", "Careers", "Privacy Policy"];
+const SUPPORT_LINKS = [
+  { href: "/contact-us", label: "Contact Us" },
+  { href: "#", label: "Shipping Policy" },
+  { href: "#", label: "Return Policy" },
+  { href: "#", label: "FAQ" },
+];
+const COMPANY_LINKS = [
+  { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
+  { href: "/privacy-policy", label: "Privacy Policy" },
+];
 
 const SOCIALS = [
   {
@@ -63,10 +73,10 @@ export function Footer() {
 
       {/* ── Main content ─────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 md:px-12 pt-14 pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-10 gap-10 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-12 gap-10 md:gap-8">
 
           {/* Brand column */}
-          <div className="col-span-2 md:col-span-4 md:col-start-1">
+          <div className="col-span-2 md:col-span-3 md:col-start-1">
             {/* Logo + name */}
             <Link href="/" className="flex items-center gap-3 mb-5">
               <Image src="/logo.png" alt="PrototypeBD" width={48} height={48} className="rounded-full" />
@@ -94,13 +104,18 @@ export function Footer() {
                 </svg>
                 admin@prototypebd.com
               </a>
-              <div className="flex items-center gap-2">
+              <a
+                href="https://maps.app.goo.gl/7X8hecLvTmmtq1TCA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:text-gray-300 transition-colors"
+              >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
                 Aftab Nagar, Dhaka 1212
-              </div>
+              </a>
             </div>
 
             {/* Socials */}
@@ -113,52 +128,119 @@ export function Footer() {
                 </a>
               ))}
             </div>
+
+            {/* Newsletter signup */}
+            <div className="mt-8">
+              <NewsletterSignup />
+            </div>
           </div>
 
-          {/* Shop */}
-          <div className="col-span-1 md:col-span-2 md:col-start-5">
-            <FooterHeading color="#4da6ff">Shop</FooterHeading>
-            <ul className="space-y-3">
-              {SHOP_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}
-                    className="flex items-center gap-2 text-sm transition-colors duration-150 group"
-                    style={{ color: "#888" }}
+          {/* Links + map */}
+          <div className="col-span-2 md:col-span-9 md:col-start-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 md:gap-10">
+
+              {/* Shop */}
+              <div>
+                <FooterHeading color="#4da6ff">Shop</FooterHeading>
+                <ul className="space-y-3">
+                  {SHOP_LINKS.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href}
+                        className="flex items-center gap-2 text-sm transition-colors duration-150 group"
+                        style={{ color: "#888" }}
+                      >
+                        <span className="text-base leading-none">{l.icon}</span>
+                        <span className="group-hover:text-white transition-colors">{l.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Support */}
+              <div>
+                <FooterHeading color="#2ecc71">Support</FooterHeading>
+                <ul className="space-y-3">
+                  {SUPPORT_LINKS.map((l) => (
+                    <li key={l.label}>
+                      <Link href={l.href} className="text-sm hover:text-white transition-colors" style={{ color: "#888" }}>
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Company */}
+              <div>
+                <FooterHeading color="#a855f7">Company</FooterHeading>
+                <ul className="space-y-3">
+                  {COMPANY_LINKS.map((l) => (
+                    <li key={l.label}>
+                      <Link href={l.href} className="text-sm hover:text-white transition-colors" style={{ color: "#888" }}>
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Map — below Shop / Support / Company */}
+            <div className="mt-10">
+              <FooterHeading color="#ff8c42">Find Us</FooterHeading>
+              <div
+                className="relative rounded-2xl overflow-hidden group"
+                style={{
+                  border: "1px solid #1f1f1f",
+                  background: "#0a0a0a",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+                }}
+              >
+                {/* Accent bar synced with the footer's top gradient */}
+                <div style={{ height: 3, background: "linear-gradient(90deg, #4da6ff, #ff8c42, #2ecc71, #a855f7)" }} />
+
+                <iframe
+                  title="PrototypeBD location — Aftab Nagar, Dhaka"
+                  src="https://www.google.com/maps?q=23.7633475,90.4402512&z=16&output=embed"
+                  width="100%"
+                  height="220"
+                  style={{
+                    border: 0,
+                    display: "block",
+                    // dark-mode map to blend with the #0f0f0f footer
+                    filter: "invert(0.91) hue-rotate(180deg) brightness(0.95) contrast(0.95) grayscale(0.15)",
+                  }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+
+                {/* Address bar + open-in-maps action */}
+                <div
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                  style={{ borderTop: "1px solid #1f1f1f", background: "linear-gradient(180deg, #111, #0a0a0a)" }}
+                >
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "#888" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    House 53, Road 05, Aftab Nagar, Dhaka 1212
+                  </div>
+                  <a
+                    href="https://maps.app.goo.gl/7X8hecLvTmmtq1TCA"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold transition-colors"
+                    style={{ color: "#ff8c42" }}
                   >
-                    <span className="text-base leading-none">{l.icon}</span>
-                    <span className="group-hover:text-white transition-colors">{l.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div className="col-span-1 md:col-span-2">
-            <FooterHeading color="#2ecc71">Support</FooterHeading>
-            <ul className="space-y-3">
-              {SUPPORT_LINKS.map((l) => (
-                <li key={l}>
-                  <Link href="#" className="text-sm hover:text-white transition-colors" style={{ color: "#888" }}>
-                    {l}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div className="col-span-1 md:col-span-2">
-            <FooterHeading color="#a855f7">Company</FooterHeading>
-            <ul className="space-y-3">
-              {COMPANY_LINKS.map((l) => (
-                <li key={l}>
-                  <Link href="#" className="text-sm hover:text-white transition-colors" style={{ color: "#888" }}>
-                    {l}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    Open in Maps
+                    <span aria-hidden>→</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -171,8 +253,7 @@ export function Footer() {
             © {new Date().getFullYear()} PrototypeBD. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-xs" style={{ color: "#555" }}>
-            <Link href="#" className="hover:text-gray-300 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-gray-300 transition-colors">Terms</Link>
+            <Link href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy</Link>
             <span>Made with <span style={{ color: "#ef4444" }}>♥</span> in Bangladesh</span>
           </div>
         </div>

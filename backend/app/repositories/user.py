@@ -39,3 +39,10 @@ class UserRepository(BaseRepository[User]):
     async def count_total(self) -> int:
         result = await self.session.execute(select(func.count()).select_from(User))
         return result.scalar_one()
+
+    async def new_by_month(self) -> list[tuple[str, int]]:
+        """New customer sign-ups per month. Returns [(YYYY-MM, count)]."""
+        month = func.strftime("%Y-%m", User.created_at)
+        q = select(month.label("m"), func.count()).group_by("m").order_by("m")
+        rows = (await self.session.execute(q)).all()
+        return [(r[0], int(r[1])) for r in rows]

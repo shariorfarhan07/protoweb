@@ -8,29 +8,45 @@ import { AddToCart } from "@/components/product/AddToCart";
 import { ProductDescription } from "@/components/product/ProductDescription";
 import { CompareToggle } from "@/components/product/CompareToggle";
 import { ProductDetailClient } from "./ProductDetailClient";
+import { ProductComments } from "@/components/product/ProductComments";
 
 interface Props {
   params: { slug: string };
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://prototypebd.com";
+
 export const revalidate = 0; // always fetch fresh — admin changes appear immediately
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);
-  if (!product) return {};
+  if (!product) {
+    return { title: "Product not found", robots: { index: false, follow: false } };
+  }
+
+  const canonical = `/products/${product.slug}`;
+  const description =
+    product.meta_desc ??
+    product.short_desc ??
+    `Buy ${product.name} in Bangladesh at PrototypeBD`;
 
   return {
     title: product.meta_title ?? product.name,
-    description:
-      product.meta_desc ??
-      product.short_desc ??
-      `Buy ${product.name} in Bangladesh at PrototypeBD`,
+    description,
+    alternates: { canonical },
     openGraph: {
+      type: "website",
       title: product.meta_title ?? product.name,
-      description: product.meta_desc ?? product.short_desc ?? "",
+      description,
+      url: canonical,
       images: product.images.length
-        ? [{ url: product.images[0].url, alt: product.name }]
+        ? product.images.map((img) => ({ url: img.url, alt: img.alt_text ?? product.name }))
         : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.meta_title ?? product.name,
+      description,
     },
   };
 }
@@ -39,28 +55,64 @@ export default async function ProductPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
 
-  // JSON-LD structured data
+  // Offers valid until end of next year (rolling) — Google recommends priceValidUntil.
+  const priceValidUntil = new Date(new Date().getFullYear() + 1, 11, 31)
+    .toISOString()
+    .split("T")[0];
+  const productUrl = `${SITE_URL}/products/${product.slug}`;
+
+  // JSON-LD structured data — Product + Breadcrumb graph
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.short_desc ?? product.meta_desc,
-    sku: product.sku,
-    brand: product.brand
-      ? { "@type": "Brand", name: product.brand.name }
-      : undefined,
-    offers: {
-      "@type": "Offer",
-      price: product.price,
-      priceCurrency: "BDT",
-      availability:
-        product.stock_qty > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-      seller: { "@type": "Organization", name: "PrototypeBD" },
-    },
-    image: product.images.map((img) => img.url),
-    aggregateRating: undefined,
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": `${productUrl}#product`,
+        name: product.name,
+        description: product.short_desc ?? product.meta_desc ?? undefined,
+        ...(product.sku ? { sku: product.sku, mpn: product.sku } : {}),
+        ...(product.brand
+          ? { brand: { "@type": "Brand", name: product.brand.name } }
+          : {}),
+        ...(product.category
+          ? { category: product.category.name }
+          : {}),
+        image: product.images.length
+          ? product.images.map((img) => img.url)
+          : undefined,
+        offers: {
+          "@type": "Offer",
+          url: productUrl,
+          price: product.price,
+          priceCurrency: "BDT",
+          priceValidUntil,
+          itemCondition: "https://schema.org/NewCondition",
+          availability:
+            product.stock_qty > 0
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          seller: { "@type": "Organization", name: "PrototypeBD" },
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+          ...(product.category
+            ? [
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: product.category.name,
+                  item: `${SITE_URL}/category/${product.category.slug}`,
+                },
+                { "@type": "ListItem", position: 4, name: product.name, item: productUrl },
+              ]
+            : [{ "@type": "ListItem", position: 3, name: product.name, item: productUrl }]),
+        ],
+      },
+    ],
   };
 
   return (
@@ -135,6 +187,9 @@ export default async function ProductPage({ params }: Props) {
 
         {/* Long description */}
         <ProductDescription html={product.long_desc} />
+
+        {/* Customer comments (moderated) */}
+        <ProductComments slug={product.slug} />
       </div>
     </>
   );

@@ -25,11 +25,11 @@ def get_order_service(db: AsyncSession = Depends(get_db)) -> OrderService:
 async def create_order(
     data: CreateOrderRequest,
     service: OrderService = Depends(get_order_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_current_user),
 ) -> OrderOut:
-    """Create an order. Works for both authenticated users and guests."""
+    """Create an order. Requires an authenticated customer account."""
     logger.debug("POST /orders — %d item(s), user=%s",
-                 len(data.items), current_user.id if current_user else "guest")
+                 len(data.items), current_user.id)
     return await service.create_order(data, user=current_user)
 
 

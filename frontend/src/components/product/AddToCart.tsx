@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FilamentVariantSchema, ProductDetail } from "@/lib/api-types";
 import { useCartStore } from "@/store/cart";
 import { buildImageUrl, formatPrice } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 interface AddToCartProps {
   product: ProductDetail;
@@ -14,7 +15,7 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore((s) => s.addItem);
 
-  const effectivePrice =
+  const regularPrice =
     selectedVariant?.variant_price != null
       ? selectedVariant.variant_price
       : product.price + (selectedVariant?.price_delta ?? 0);
@@ -24,8 +25,18 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
       ? selectedVariant.stock_qty > 0
       : product.stock_qty > 0;
 
+  // Preorder is offered when the item is out of stock and the admin enabled it.
+  const preorderAvailable = !inStock && product.preorder_enabled;
+  // Preorder price (admin-set) overrides the regular price; falls back to it if unset.
+  const preorderPrice =
+    product.preorder_price != null ? product.preorder_price : regularPrice;
+
+  const isPreorder = preorderAvailable;
+  const effectivePrice = isPreorder ? preorderPrice : regularPrice;
+  const canPurchase = inStock || preorderAvailable;
+
   function handleAdd() {
-    if (!inStock) return;
+    if (!canPurchase) return;
     for (let i = 0; i < quantity; i++) {
       addItem({
         productId: product.id,
@@ -39,8 +50,14 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
         variantLabel: selectedVariant
           ? `${selectedVariant.color_name} / ${selectedVariant.material}`
           : undefined,
+        isPreorder,
       });
     }
+    trackEvent("add_to_cart", {
+      value: effectivePrice * quantity,
+      currency: "BDT",
+      items: [{ item_id: product.id, item_name: product.name, price: effectivePrice, quantity }],
+    });
   }
 
   return (
@@ -50,9 +67,23 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
         <span className="text-3xl font-black" style={{ letterSpacing: -1 }}>
           {formatPrice(effectivePrice)}
         </span>
-        {product.compare_price && product.compare_price > product.price && (
-          <span className="text-lg text-gray-400 line-through">
-            {formatPrice(product.compare_price)}
+        {isPreorder
+          ? regularPrice !== effectivePrice && (
+              <span className="text-lg text-gray-400 line-through">
+                {formatPrice(regularPrice)}
+              </span>
+            )
+          : product.compare_price && product.compare_price > product.price && (
+              <span className="text-lg text-gray-400 line-through">
+                {formatPrice(product.compare_price)}
+              </span>
+            )}
+        {isPreorder && (
+          <span
+            className="text-xs font-semibold rounded-full px-2.5 py-1"
+            style={{ background: "#fff8ed", color: "#c45b00" }}
+          >
+            Preorder price
           </span>
         )}
       </div>
@@ -60,9 +91,13 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
       {/* Stock status */}
       <p
         className="text-sm font-medium"
-        style={{ color: inStock ? "#38a169" : "#e53e3e" }}
+        style={{ color: inStock ? "#38a169" : preorderAvailable ? "#c45b00" : "#e53e3e" }}
       >
-        {inStock ? "In Stock" : "Out of Stock"}
+        {inStock
+          ? "In Stock"
+          : preorderAvailable
+          ? "Out of stock — available to preorder"
+          : "Out of Stock"}
       </p>
 
       {/* Quantity + Add */}
@@ -94,16 +129,17 @@ export function AddToCart({ product, selectedVariant }: AddToCartProps) {
 
         <button
           onClick={handleAdd}
-          disabled={!inStock}
+          disabled={!canPurchase}
           className="btn-pill flex-1"
           style={{
             fontSize: 14,
             padding: "14px 24px",
-            opacity: inStock ? 1 : 0.5,
-            cursor: inStock ? "pointer" : "not-allowed",
+            opacity: canPurchase ? 1 : 0.5,
+            cursor: canPurchase ? "pointer" : "not-allowed",
+            background: isPreorder ? "#c45b00" : undefined,
           }}
         >
-          Add to Cart
+          {isPreorder ? "Preorder Now" : "Add to Cart"}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { submitContactMessage } from "@/lib/api";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -22,10 +23,18 @@ export function ContactForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setState("submitting");
-    // TODO: wire to backend endpoint
-    await new Promise((r) => setTimeout(r, 1000));
-    setState("success");
-    setFields({ name: "", email: "", phone: "", message: "" });
+    try {
+      await submitContactMessage({
+        name: fields.name.trim(),
+        email: fields.email.trim(),
+        phone: fields.phone.trim() || undefined,
+        message: fields.message.trim(),
+      });
+      setState("success");
+      setFields({ name: "", email: "", phone: "", message: "" });
+    } catch {
+      setState("error");
+    }
   }
 
   if (state === "success") {

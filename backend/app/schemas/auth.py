@@ -33,6 +33,9 @@ class UserPublic(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    # Effective RBAC permissions for this user's role (populated on login / me).
+    permissions: list[str] = []
+    is_superuser: bool = False
 
     model_config = {"from_attributes": True}
 

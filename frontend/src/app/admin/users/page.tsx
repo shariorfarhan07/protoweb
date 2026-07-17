@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getAdminUsers, updateUser } from "@/lib/api";
-import type { PaginatedResponse, UserPublic } from "@/lib/api-types";
-
-const ROLES = ["customer", "support", "inventory_manager", "admin", "super_admin"] as const;
+import { getAdminUsers, updateUser, getRoles } from "@/lib/api";
+import type { PaginatedResponse, RoleOut, UserPublic } from "@/lib/api-types";
 
 const ROLE_STYLE: Record<string, { bg: string; color: string }> = {
   customer:          { bg: "#f5f5f5",  color: "#555" },
@@ -19,6 +17,7 @@ const TD = "px-5 py-3.5 align-middle";
 
 export default function AdminUsersPage() {
   const [data, setData] = useState<PaginatedResponse<UserPublic> | null>(null);
+  const [roles, setRoles] = useState<RoleOut[]>([]);
   const [filterRole, setFilterRole] = useState<string>("");
   const [filterActive, setFilterActive] = useState<string>("");
   const [page, setPage] = useState(1);
@@ -45,6 +44,15 @@ export default function AdminUsersPage() {
   }, [filterRole, filterActive, page]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  useEffect(() => {
+    getRoles().then(setRoles).catch(() => {});
+  }, []);
+
+  const roleLabel = useCallback(
+    (slug: string) => roles.find((r) => r.slug === slug)?.name ?? slug.replace(/_/g, " "),
+    [roles]
+  );
 
   async function handleToggleActive(user: UserPublic) {
     setUpdatingId(user.id);
@@ -92,7 +100,7 @@ export default function AdminUsersPage() {
           <select value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
             className={selectCls} style={selectStyle}>
             <option value="">All roles</option>
-            {ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
+            {roles.map((r) => <option key={r.slug} value={r.slug}>{r.name}</option>)}
           </select>
           <select value={filterActive} onChange={(e) => { setFilterActive(e.target.value); setPage(1); }}
             className={selectCls} style={selectStyle}>
@@ -154,13 +162,16 @@ export default function AdminUsersPage() {
                 <td className={TD} style={{ color: "#777", fontSize: 13 }}>{user.email}</td>
                 <td className={TD}>
                   <select
-                    defaultValue={user.role}
+                    value={user.role}
                     disabled={updatingId === user.id}
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
                     className="text-xs rounded-lg px-2 py-1.5 focus:outline-none disabled:opacity-40"
                     style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333" }}
                   >
-                    {ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
+                    {roles.map((r) => <option key={r.slug} value={r.slug}>{r.name}</option>)}
+                    {!roles.some((r) => r.slug === user.role) && (
+                      <option value={user.role}>{roleLabel(user.role)}</option>
+                    )}
                   </select>
                 </td>
                 <td className={TD}>

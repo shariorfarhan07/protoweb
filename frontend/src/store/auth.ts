@@ -12,6 +12,7 @@ interface AuthState {
   isAdmin: () => boolean;
   isSuperAdmin: () => boolean;
   canManageInventory: () => boolean;
+  hasPermission: (key: string) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,6 +36,12 @@ export const useAuthStore = create<AuthState>()(
           user?.role === "super_admin" ||
           user?.role === "inventory_manager"
         );
+      },
+      hasPermission: (key) => {
+        const { user } = get();
+        if (!user) return false;
+        if (user.is_superuser) return true;
+        return (user.permissions ?? []).includes(key);
       },
     }),
     {

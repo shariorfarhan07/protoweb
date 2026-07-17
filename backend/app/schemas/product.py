@@ -14,6 +14,9 @@ class ProductCreate(BaseModel):
     compare_price: Optional[float] = None
     sku: Optional[str] = None
     stock_qty: int = 0
+    reorder_level: int = 5
+    preorder_enabled: bool = False
+    preorder_price: Optional[float] = None
     product_type: str
     is_featured: bool = False
     is_active: bool = True
@@ -48,6 +51,9 @@ class ProductUpdate(BaseModel):
     compare_price: Optional[float] = None
     sku: Optional[str] = None
     stock_qty: Optional[int] = None
+    reorder_level: Optional[int] = None
+    preorder_enabled: Optional[bool] = None
+    preorder_price: Optional[float] = None
     product_type: Optional[str] = None
     is_featured: Optional[bool] = None
     is_active: Optional[bool] = None
@@ -110,6 +116,8 @@ class ProductList(BaseModel):
     compare_price: Optional[float] = None
     product_type: str
     stock_qty: int
+    preorder_enabled: bool = False
+    preorder_price: Optional[float] = None
     is_featured: bool = False
     primary_image: Optional[str] = None
     category: Optional[CategoryRef] = None
@@ -135,6 +143,8 @@ class ProductList(BaseModel):
                     "compare_price": float(data.compare_price) if data.compare_price else None,
                     "product_type": data.product_type,
                     "stock_qty": data.stock_qty,
+                    "preorder_enabled": data.preorder_enabled,
+                    "preorder_price": float(data.preorder_price) if data.preorder_price is not None else None,
                     "is_featured": data.is_featured,
                     "primary_image": primary.url,
                     "category": data.category,
@@ -154,6 +164,9 @@ class ProductDetail(BaseModel):
     sku: Optional[str] = None
     product_type: str
     stock_qty: int
+    reorder_level: int = 5
+    preorder_enabled: bool = False
+    preorder_price: Optional[float] = None
     is_featured: bool = False
     is_active: bool = True
     specifications: Optional[dict[str, Any]] = None
@@ -182,6 +195,9 @@ class ProductDetail(BaseModel):
                 "sku": data.sku,
                 "product_type": data.product_type,
                 "stock_qty": data.stock_qty,
+                "reorder_level": data.reorder_level,
+                "preorder_enabled": data.preorder_enabled,
+                "preorder_price": float(data.preorder_price) if data.preorder_price is not None else None,
                 "is_featured": data.is_featured,
                 "is_active": data.is_active,
                 "specifications": data.specifications,

@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const expired = searchParams.get("expired");
   const setAuth = useAuthStore((s) => s.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +29,10 @@ export default function LoginPage() {
         data.user.role === "super_admin" ||
         data.user.role === "inventory_manager" ||
         data.user.role === "support";
-      router.push(isAdmin ? "/admin" : "/");
+      // Honor an explicit ?next= target, else send staff to admin and
+      // customers to their account page.
+      const dest = next && next.startsWith("/") ? next : isAdmin ? "/admin" : "/account";
+      router.push(dest);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Login failed. Please try again."
@@ -42,6 +49,12 @@ export default function LoginPage() {
         <p className="text-sm text-gray-500 mb-6">
           PrototypeBD — 3D printers &amp; laser engravers
         </p>
+
+        {expired && !error && (
+          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">
+            Your session expired. Please sign in again.
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
@@ -94,7 +107,26 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
+
+        <p className="text-sm text-gray-500 text-center mt-6">
+          New to PrototypeBD?{" "}
+          <Link
+            href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+            className="font-semibold"
+            style={{ color: "#f2890e" }}
+          >
+            Create an account
+          </Link>
+        </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f4f4f0]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

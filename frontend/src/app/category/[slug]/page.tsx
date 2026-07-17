@@ -10,14 +10,22 @@ interface Props {
   searchParams: { page?: string };
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://prototypebd.com";
+
 export const revalidate = 120;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cat = await getCategory(params.slug);
-  if (!cat) return {};
+  if (!cat) {
+    return { title: "Category not found", robots: { index: false, follow: false } };
+  }
+  const canonical = `/category/${cat.slug}`;
+  const description = cat.description ?? `Shop ${cat.name} at PrototypeBD Bangladesh`;
   return {
-    title: `${cat.name} — PrototypeBD`,
-    description: cat.description ?? `Shop ${cat.name} at PrototypeBD Bangladesh`,
+    title: cat.name,
+    description,
+    alternates: { canonical },
+    openGraph: { type: "website", title: `${cat.name} — PrototypeBD`, description, url: canonical },
   };
 }
 
@@ -29,8 +37,22 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   if (!cat) notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+      { "@type": "ListItem", position: 3, name: cat.name, item: `${SITE_URL}/category/${cat.slug}` },
+    ],
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-gray-400 mb-6" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-gray-700">Home</Link>

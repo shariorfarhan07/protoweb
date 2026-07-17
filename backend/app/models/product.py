@@ -25,6 +25,12 @@ class Product(Base, TimestampMixin):
     compare_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
     sku: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     stock_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Stock level at/below which the product is flagged for reordering on the dashboard.
+    reorder_level: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    # When enabled, customers can preorder this product while it is out of stock.
+    preorder_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Optional preorder price; when set it overrides `price` for preorders.
+    preorder_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # 'printer' | 'filament' | 'cnc' | 'printed'

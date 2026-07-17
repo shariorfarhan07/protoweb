@@ -36,6 +36,14 @@ export function CartItem({ item }: CartItemProps) {
         {item.variantLabel && (
           <p className="text-xs text-gray-400 mt-0.5">{item.variantLabel}</p>
         )}
+        {item.isPreorder && (
+          <span
+            className="inline-block text-xs font-semibold rounded-full px-2 py-0.5 mt-1"
+            style={{ background: "#fff8ed", color: "#c45b00" }}
+          >
+            Preorder
+          </span>
+        )}
         <p className="font-bold text-sm mt-1">{formatPrice(item.price)}</p>
 
         {/* Qty + remove */}

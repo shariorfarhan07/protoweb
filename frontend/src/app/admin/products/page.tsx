@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { adminListProducts, deleteProduct, getCategories } from "@/lib/api";
+import { adminListProducts, deleteProduct, getCategories, exportProductsCsv } from "@/lib/api";
 import type { CategorySchema, PaginatedResponse, ProductList } from "@/lib/api-types";
 import { buildImageUrl } from "@/lib/utils";
+import { ImportCsvModal } from "@/components/admin/ImportCsvModal";
 
 const TH = "px-5 py-3 text-left font-medium uppercase tracking-widest whitespace-nowrap";
 const TD = "px-5 py-3.5 align-middle";
@@ -31,6 +32,8 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [busy, setBusy] = useState<"export" | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   // Filters
   const [search,      setSearch]      = useState("");
@@ -103,6 +106,26 @@ export default function AdminProductsPage() {
 
   const hasFilters = search || productType || category || stockFilter || activeFilter || featuredFilter;
 
+  async function handleExport() {
+    setBusy("export");
+    setError(null);
+    try {
+      const blob = await exportProductsCsv();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `products-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleDelete(productId: number, name: string) {
     if (!confirm(`Deactivate "${name}"? It will be hidden from the store.`)) return;
     setDeletingId(productId);
@@ -128,13 +151,32 @@ export default function AdminProductsPage() {
             {loading ? "Loading…" : `${data?.total ?? 0} product${data?.total !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="text-sm font-medium rounded-lg px-4 py-2 transition"
-          style={{ background: "#111", color: "#fff" }}
-        >
-          + Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={busy !== null}
+            className="text-sm font-medium rounded-lg px-4 py-2 transition disabled:opacity-50"
+            style={{ background: "#fff", border: "1px solid #e0e0e0", color: "#333" }}
+          >
+            {busy === "export" ? "Exporting…" : "⬇ Export CSV"}
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            disabled={busy !== null}
+            className="text-sm font-medium rounded-lg px-4 py-2 transition disabled:opacity-50"
+            style={{ background: "#fff", border: "1px solid #e0e0e0", color: "#333" }}
+            title="Upload an edited CSV to update products (matched by id or SKU)"
+          >
+            ⬆ Update via CSV
+          </button>
+          <Link
+            href="/admin/products/new"
+            className="text-sm font-medium rounded-lg px-4 py-2 transition"
+            style={{ background: "#111", color: "#fff" }}
+          >
+            + Add Product
+          </Link>
+        </div>
       </div>
 
       {/* Search + Filters bar */}
@@ -400,6 +442,13 @@ export default function AdminProductsPage() {
       </div>
 
       <Pagination data={data} page={page} setPage={setPage} />
+
+      {showImport && (
+        <ImportCsvModal
+          onClose={() => setShowImport(false)}
+          onImported={() => fetchProducts(activeSearch.current)}
+        />
+      )}
     </div>
   );
 }

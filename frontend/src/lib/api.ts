@@ -1,5 +1,25 @@
 import type {
   AdminStatsOut,
+  SalesSummaryOut,
+  SalesReportOut,
+  DashboardMetricsOut,
+  LowStockItem,
+  PendingOrderItem,
+  BlogCategory,
+  BlogComment,
+  BlogCommentAdmin,
+  ProductComment,
+  ProductCommentAdmin,
+  ContactMessage,
+  NewsletterSubscribeResult,
+  NewsletterSubscriber,
+  BlogPostDetail,
+  BlogPostList,
+  BlogTag,
+  CommunityProject,
+  CommunityProjectPayload,
+  SyncResult,
+  VideoTutorial,
   BrandSchema,
   CategorySchema,
   CompareResponse,
@@ -9,8 +29,15 @@ import type {
   ProductDetail,
   ProductList,
   ProductTypeSchema,
+  Permission,
+  RoleOut,
+  RoleCreatePayload,
+  RoleUpdatePayload,
   ReviewCreate,
   ReviewOut,
+  ReviewRequest,
+  ReviewRequestPublic,
+  ReviewSubmitPayload,
   ReviewUpdate,
   TokenResponse,
   UserPublic,
@@ -59,12 +86,41 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Reactive logout fallback: when an authenticated request comes back 401 the
+ * token is expired or was invalidated server-side. Clear the session at once
+ * and bounce to /login from any gated page. (Proactive expiry is handled by
+ * SessionGuard; this catches tokens killed before their `exp`.)
+ */
+function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("prototypebd-auth");
+  } catch {
+    /* ignore */
+  }
+  // Clear the in-memory store so the UI updates without a reload.
+  import("@/store/auth")
+    .then(({ useAuthStore }) => useAuthStore.getState().clearAuth())
+    .catch(() => {});
+  const path = window.location.pathname;
+  const onGatedPage = path.startsWith("/admin") || path.startsWith("/account");
+  if (onGatedPage && !path.startsWith("/login")) {
+    window.location.href = "/login?expired=1";
+  }
+}
+
 async function apiFetch<T>(
   path: string,
   init?: RequestInit & { next?: { revalidate?: number; tags?: string[] } }
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) {
+    // Only treat 401 as a session expiry when we actually sent a token —
+    // otherwise a failed login (also 401) would trigger a bogus logout.
+    if (res.status === 401 && typeof window !== "undefined" && getStoredToken()) {
+      handleUnauthorized();
+    }
     const body = await res.text().catch(() => "");
     throw new ApiError(res.status, body || `HTTP ${res.status}`);
   }
@@ -206,6 +262,23 @@ export async function login(
   });
 }
 
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}
+
+export async function register(data: RegisterPayload): Promise<UserPublic> {
+  return apiFetch("/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
 export async function logout(): Promise<void> {
   await apiFetch("/auth/logout", {
     method: "POST",
@@ -272,11 +345,54 @@ export async function getAdminStats(): Promise<AdminStatsOut> {
   });
 }
 
+export async function getSalesSummary(months = 12): Promise<SalesSummaryOut> {
+  return apiFetch(`/admin/sales-summary?months=${months}`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getDashboardMetrics(months = 12): Promise<DashboardMetricsOut> {
+  return apiFetch(`/admin/metrics?months=${months}`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getLowStockProducts(limit = 50): Promise<LowStockItem[]> {
+  return apiFetch(`/admin/low-stock?limit=${limit}`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getPendingOrders(): Promise<PendingOrderItem[]> {
+  return apiFetch("/admin/pending-orders", {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getSalesReport(
+  start?: string,
+  end?: string
+): Promise<SalesReportOut> {
+  const qs = new URLSearchParams();
+  if (start) qs.set("start", start);
+  if (end) qs.set("end", end);
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return apiFetch(`/admin/reports/sales${suffix}`, {
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
 export async function getAdminOrders(
-  params: { status?: string; page?: number; page_size?: number } = {}
+  params: { status?: string; search?: string; page?: number; page_size?: number } = {}
 ): Promise<PaginatedResponse<OrderOut>> {
   const qs = new URLSearchParams();
   if (params.status) qs.set("status", params.status);
+  if (params.search) qs.set("search", params.search);
   if (params.page) qs.set("page", String(params.page));
   if (params.page_size) qs.set("page_size", String(params.page_size));
   return apiFetch(`/admin/orders${qs.toString() ? `?${qs}` : ""}`, {
@@ -323,6 +439,42 @@ export async function updateUser(
   });
 }
 
+// ── RBAC: roles & permissions ──────────────────────────────────────────────
+
+export async function getPermissions(): Promise<Permission[]> {
+  return apiFetch("/admin/permissions", { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function getRoles(): Promise<RoleOut[]> {
+  return apiFetch("/admin/roles", { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function createRole(data: RoleCreatePayload): Promise<RoleOut> {
+  return apiFetch("/admin/roles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function updateRole(roleId: number, data: RoleUpdatePayload): Promise<RoleOut> {
+  return apiFetch(`/admin/roles/${roleId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function deleteRole(roleId: number): Promise<void> {
+  return apiFetch(`/admin/roles/${roleId}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
 export interface AdminProductFilters {
   search?: string;
   product_type?: string;
@@ -353,10 +505,11 @@ export async function adminListProducts(
 }
 
 export async function getAdminInventory(
-  params: { low_stock_only?: boolean; page?: number; page_size?: number } = {}
+  params: { low_stock_only?: boolean; search?: string; page?: number; page_size?: number } = {}
 ): Promise<PaginatedResponse<ProductList>> {
   const qs = new URLSearchParams();
   if (params.low_stock_only) qs.set("low_stock_only", "true");
+  if (params.search) qs.set("search", params.search);
   if (params.page) qs.set("page", String(params.page));
   if (params.page_size) qs.set("page_size", String(params.page_size));
   return apiFetch(`/admin/inventory${qs.toString() ? `?${qs}` : ""}`, {
@@ -373,6 +526,9 @@ export interface ProductCreatePayload {
   compare_price?: number;
   sku?: string;
   stock_qty: number;
+  reorder_level?: number;
+  preorder_enabled?: boolean;
+  preorder_price?: number | null;
   product_type: string;
   is_featured?: boolean;
   is_active?: boolean;
@@ -618,6 +774,339 @@ export async function adminUpdateReview(id: number, data: ReviewUpdate): Promise
 
 export async function adminDeleteReview(id: number): Promise<void> {
   await apiFetch(`/reviews/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function adminApproveReview(id: number): Promise<ReviewOut> {
+  return apiFetch(`/reviews/${id}/approve`, {
+    method: "PATCH",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── One-time review request links ────────────────────────────────────────────
+
+export async function adminCreateReviewRequest(
+  data: { customer_name?: string; customer_email?: string; note?: string }
+): Promise<ReviewRequest> {
+  return apiFetch("/reviews/requests", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function adminListReviewRequests(): Promise<ReviewRequest[]> {
+  return apiFetch("/reviews/requests", { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function getReviewRequest(token: string): Promise<ReviewRequestPublic> {
+  return apiFetch(`/reviews/request/${token}`, { cache: "no-store" });
+}
+
+export async function submitReviewViaToken(
+  token: string,
+  data: ReviewSubmitPayload
+): Promise<ReviewOut> {
+  return apiFetch(`/reviews/request/${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+// ── Blog ───────────────────────────────────────────────────────────────────
+
+export interface BlogFilters {
+  category?: string;
+  tag?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
+
+const REVALIDATE_BLOG = 60;
+
+export async function getBlogPosts(
+  filters: BlogFilters = {}
+): Promise<PaginatedResponse<BlogPostList>> {
+  const qs = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  });
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return apiFetch(`/blog/posts${suffix}`, { next: { revalidate: REVALIDATE_BLOG } });
+}
+
+export async function getBlogPost(slug: string): Promise<BlogPostDetail | null> {
+  try {
+    return await apiFetch<BlogPostDetail>(`/blog/posts/${slug}`, { cache: "no-store" });
+  } catch {
+    return null;
+  }
+}
+
+export async function getBlogCategories(): Promise<BlogCategory[]> {
+  return apiFetch("/blog/categories", { next: { revalidate: REVALIDATE_BLOG } });
+}
+
+export async function getBlogTags(): Promise<BlogTag[]> {
+  return apiFetch("/blog/tags", { next: { revalidate: REVALIDATE_BLOG } });
+}
+
+export async function getBlogComments(slug: string): Promise<BlogComment[]> {
+  return apiFetch(`/blog/posts/${slug}/comments`, { cache: "no-store" });
+}
+
+export async function addBlogComment(
+  slug: string,
+  data: { author_name: string; author_email?: string; content: string; parent_id?: number }
+): Promise<BlogComment> {
+  return apiFetch(`/blog/posts/${slug}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+// ── Blog comment moderation (admin) ─────────────────────────────────────────
+
+export async function getAdminBlogComments(approved?: boolean): Promise<BlogCommentAdmin[]> {
+  const qs = approved === undefined ? "" : `?approved=${approved}`;
+  return apiFetch(`/blog/admin/comments${qs}`, { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function approveBlogComment(commentId: number): Promise<BlogComment> {
+  return apiFetch(`/blog/comments/${commentId}/approve`, {
+    method: "PATCH",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function deleteBlogComment(commentId: number): Promise<void> {
+  await apiFetch(`/blog/comments/${commentId}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── Product comments (public) ───────────────────────────────────────────────
+
+export async function getProductComments(slug: string): Promise<ProductComment[]> {
+  return apiFetch(`/products/${slug}/comments`, { cache: "no-store" });
+}
+
+export async function addProductComment(
+  slug: string,
+  data: { author_name: string; author_email?: string; content: string }
+): Promise<ProductComment> {
+  return apiFetch(`/products/${slug}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+// ── Product comment moderation (admin) ──────────────────────────────────────
+
+export async function getAdminProductComments(approved?: boolean): Promise<ProductCommentAdmin[]> {
+  const qs = approved === undefined ? "" : `?approved=${approved}`;
+  return apiFetch(`/admin/product-comments${qs}`, { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function approveProductComment(commentId: number): Promise<ProductComment> {
+  return apiFetch(`/admin/product-comments/${commentId}/approve`, {
+    method: "PATCH",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function deleteProductComment(commentId: number): Promise<void> {
+  await apiFetch(`/admin/product-comments/${commentId}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── Contact form (public) ────────────────────────────────────────────────────
+
+export async function submitContactMessage(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+}): Promise<ContactMessage> {
+  return apiFetch("/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+// ── Newsletter (public) ──────────────────────────────────────────────────────
+
+export async function subscribeNewsletter(email: string): Promise<NewsletterSubscribeResult> {
+  return apiFetch("/newsletter/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+    cache: "no-store",
+  });
+}
+
+// ── Contact messages & newsletter (admin) ─────────────────────────────────────
+
+export async function getContactMessages(unreadOnly = false): Promise<ContactMessage[]> {
+  const qs = unreadOnly ? "?unread_only=true" : "";
+  return apiFetch(`/admin/contact-messages${qs}`, { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function setContactMessageRead(id: number, isRead: boolean): Promise<ContactMessage> {
+  return apiFetch(`/admin/contact-messages/${id}/read?is_read=${isRead}`, {
+    method: "PATCH",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function deleteContactMessage(id: number): Promise<void> {
+  await apiFetch(`/admin/contact-messages/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+  return apiFetch("/admin/newsletter/subscribers", { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function deleteNewsletterSubscriber(id: number): Promise<void> {
+  await apiFetch(`/admin/newsletter/subscribers/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export async function getVideoTutorials(): Promise<VideoTutorial[]> {
+  return apiFetch("/blog/videos", { next: { revalidate: REVALIDATE_BLOG } });
+}
+
+export async function getCommunityProjects(): Promise<CommunityProject[]> {
+  return apiFetch("/blog/projects", { next: { revalidate: REVALIDATE_BLOG } });
+}
+
+// ── Community projects (admin) ───────────────────────────────────────────────
+
+export async function getAdminProjects(): Promise<CommunityProject[]> {
+  return apiFetch("/blog/admin/projects", { headers: { ...authHeader() }, cache: "no-store" });
+}
+
+export async function createProject(data: CommunityProjectPayload): Promise<CommunityProject> {
+  return apiFetch("/blog/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function updateProject(
+  id: number,
+  data: Partial<CommunityProjectPayload>
+): Promise<CommunityProject> {
+  return apiFetch(`/blog/projects/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function deleteProject(id: number): Promise<void> {
+  await apiFetch(`/blog/projects/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+// ── Product CSV export / import ───────────────────────────────────────────────
+
+export async function exportProductsCsv(): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/admin/products/export`, {
+    headers: { ...authHeader() },
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new ApiError(res.status, (await res.text().catch(() => "")) || `HTTP ${res.status}`);
+  return res.blob();
+}
+
+export interface ProductImportResult {
+  updated: number;
+  skipped: number;
+  errors: { row: number; message: string }[];
+}
+
+export async function importProductsCsv(file: File): Promise<ProductImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/admin/products/import`, {
+    method: "POST",
+    body: form,
+    headers: { ...authHeader() },
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new ApiError(res.status, (await res.text().catch(() => "")) || `HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function syncFacebookPosts(): Promise<SyncResult> {
+  return apiFetch("/blog/sync-facebook", {
+    method: "POST",
+    headers: { ...authHeader() },
+    cache: "no-store",
+  });
+}
+
+export interface BlogPostPayload {
+  title: string;
+  excerpt?: string;
+  content?: string;
+  cover_image?: string;
+  author_name?: string;
+  category_id?: number;
+  tags?: string[];
+  is_published?: boolean;
+}
+
+export async function createBlogPost(data: BlogPostPayload): Promise<BlogPostDetail> {
+  return apiFetch("/blog/posts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+}
+
+export async function deleteBlogPost(postId: number): Promise<void> {
+  await apiFetch(`/blog/posts/${postId}`, {
     method: "DELETE",
     headers: { ...authHeader() },
     cache: "no-store",

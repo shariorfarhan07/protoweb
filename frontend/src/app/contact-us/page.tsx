@@ -16,7 +16,7 @@ const ContactForm = dynamic(
 
 /* ── SEO Metadata ──────────────────────────────────────────────────────────── */
 export const metadata: Metadata = {
-  title: "Contact Us — PrototypeBD | Dhaka, Bangladesh",
+  title: "Contact Us — Dhaka, Bangladesh",
   description:
     "Get in touch with PrototypeBD — Bangladesh's premier 3D printer, laser engraver & filament shop. Located in Aftab Nagar, Dhaka. Call, email, or message us today.",
   keywords: [
@@ -34,7 +34,6 @@ export const metadata: Metadata = {
     description:
       "Reach PrototypeBD by phone, email, or our contact form. Visit us at Aftab Nagar, Dhaka. Expert support for 3D printers, laser engravers, CNC & filament.",
     url: "/contact-us",
-    images: [{ url: "/og-contact.png", width: 1200, height: 630, alt: "Contact PrototypeBD" }],
   },
   alternates: { canonical: "/contact-us" },
 };

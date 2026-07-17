@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cart";
+import { useAuthStore } from "@/store/auth";
 import { CartItem } from "@/components/cart/CartItem";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 
 interface FormState {
   fname: string;
@@ -22,12 +25,45 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, totalPrice, clearCart } = useCartStore();
+  const user = useAuthStore((s) => s.user);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // Buying requires an account — send guests to sign in, then back here.
+  useEffect(() => {
+    if (mounted && !user && !submitted) {
+      router.replace("/login?next=/checkout");
+    }
+  }, [mounted, user, submitted, router]);
+
+  // Prefill shipping details from the signed-in customer's profile.
+  useEffect(() => {
+    if (!user) return;
+    setForm((prev) => ({
+      ...prev,
+      fname: prev.fname || user.first_name || "",
+      lname: prev.lname || user.last_name || "",
+      email: prev.email || user.email || "",
+      phone: prev.phone || user.phone || "",
+    }));
+  }, [user]);
+
+  // While auth state hydrates / redirect is in flight, avoid flashing the form.
+  if (!mounted || (!user && !submitted)) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-16 text-center text-gray-400">
+        Loading…
+      </div>
+    );
+  }
 
   if (items.length === 0 && !submitted) {
     return (
@@ -57,9 +93,20 @@ export default function CheckoutPage() {
         <p className="text-gray-500 mb-6">
           Thank you for your order. We will contact you shortly.
         </p>
-        <Link href="/" className="btn-pill" style={{ fontSize: 13 }}>
-          Back to Home
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {useAuthStore.getState().user && (
+            <Link href="/account" className="btn-pill" style={{ fontSize: 13 }}>
+              Track My Orders
+            </Link>
+          )}
+          <Link
+            href="/"
+            className="rounded-full px-6 py-3 text-sm font-bold"
+            style={{ background: "#fff", border: "1px solid #e4e6ea", color: "#111" }}
+          >
+            Back to Home
+          </Link>
+        </div>
       </div>
     );
   }
@@ -85,6 +132,17 @@ export default function CheckoutPage() {
           product_id: item.productId,
           ...(item.variantId != null ? { variant_id: item.variantId } : {}),
           quantity: item.quantity,
+        })),
+      });
+      trackEvent("purchase", {
+        value: totalPrice(),
+        currency: "BDT",
+        transaction_id: order.order_number,
+        items: items.map((i) => ({
+          item_id: i.productId,
+          item_name: i.name,
+          price: i.price,
+          quantity: i.quantity,
         })),
       });
       clearCart();

@@ -13,24 +13,40 @@ const TD = "px-5 py-3.5 align-middle";
 export default function AdminInventoryPage() {
   const [data, setData] = useState<PaginatedResponse<ProductList> | null>(null);
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingStock, setEditingStock] = useState<Record<number, number>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  // Debounce the search box → reset to page 1 on a new query.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const fetchInventory = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getAdminInventory({ low_stock_only: lowStockOnly || undefined, page, page_size: 20 });
+      const result = await getAdminInventory({
+        low_stock_only: lowStockOnly || undefined,
+        search: search || undefined,
+        page,
+        page_size: 20,
+      });
       setData(result);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load inventory");
     } finally {
       setLoading(false);
     }
-  }, [lowStockOnly, page]);
+  }, [lowStockOnly, search, page]);
 
   useEffect(() => { fetchInventory(); }, [fetchInventory]);
 
@@ -64,11 +80,34 @@ export default function AdminInventoryPage() {
           </p>
         </div>
 
-        <label className="flex items-center gap-2 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
-          <span
-            onClick={() => { setLowStockOnly((v) => !v); setPage(1); }}
-            className="relative inline-flex items-center cursor-pointer"
+        <div className="flex items-center gap-4">
+        <div className="relative">
+          <svg
+            width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
           >
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search name or SKU"
+            className="text-sm rounded-lg pl-9 pr-8 py-2 focus:outline-none"
+            style={{ border: "1px solid #e0e0e0", background: "#fff", color: "#333", width: 240 }}
+          />
+          {searchInput && (
+            <button
+              onClick={() => setSearchInput("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer select-none" style={{ fontSize: 13, color: "#555" }}>
+          <span className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
               checked={lowStockOnly}
@@ -83,6 +122,7 @@ export default function AdminInventoryPage() {
           </span>
           Low stock only
         </label>
+        </div>
       </div>
 
       {error && (
@@ -178,6 +218,19 @@ export default function AdminInventoryPage() {
                         style={{ background: "#fff1f1", color: "#e5484d", fontSize: 10 }}
                       >
                         Low
+                      </span>
+                    )}
+                    {product.stock_qty <= 0 && product.preorder_enabled && (
+                      <span
+                        className="ml-1.5 text-xs rounded-full px-1.5 py-0.5"
+                        style={{ background: "#fff8ed", color: "#c45b00", fontSize: 10 }}
+                        title={
+                          product.preorder_price != null
+                            ? `Preorder at ৳${product.preorder_price.toLocaleString()}`
+                            : "Preorder at regular price"
+                        }
+                      >
+                        Preorder
                       </span>
                     )}
                   </td>

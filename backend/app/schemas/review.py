@@ -36,6 +36,43 @@ class ReviewOut(BaseModel):
     rating: int
     content: str
     is_active: bool
+    is_approved: bool = True
+    source: str = "admin"
     sort_order: int
     created_at: datetime
     updated_at: datetime
+
+
+# ── One-time review request links ───────────────────────────────────────────
+
+class ReviewRequestCreate(BaseModel):
+    customer_name: Optional[str] = Field(None, max_length=120)
+    customer_email: Optional[str] = Field(None, max_length=255)
+    note: Optional[str] = Field(None, max_length=255)
+
+
+class ReviewRequestOut(BaseModel):
+    model_config = model_config_orm
+
+    id: int
+    token: str
+    customer_name: Optional[str]
+    customer_email: Optional[str]
+    note: Optional[str]
+    is_used: bool
+    review_id: Optional[int]
+    created_at: datetime
+
+
+class ReviewRequestPublic(BaseModel):
+    """What the public review page needs to render the form (no internal fields)."""
+    valid: bool
+    used: bool
+    customer_name: Optional[str] = None
+
+
+class ReviewSubmit(BaseModel):
+    reviewer_name: str = Field(..., min_length=2, max_length=120)
+    reviewer_title: Optional[str] = Field(None, max_length=160)
+    rating: int = Field(..., ge=1, le=5)
+    content: str = Field(..., min_length=10)

@@ -6,8 +6,10 @@ import {
   adminDeleteReview,
   adminListReviews,
   adminUpdateReview,
+  adminApproveReview,
+  adminCreateReviewRequest,
 } from "@/lib/api";
-import type { ReviewOut, ReviewCreate } from "@/lib/api-types";
+import type { ReviewOut, ReviewCreate, ReviewRequest } from "@/lib/api-types";
 
 const TH = "px-5 py-3 text-left font-medium uppercase tracking-widest whitespace-nowrap";
 const TD = "px-5 py-3.5 align-middle";
@@ -231,12 +233,118 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
   );
 }
 
+function LinkModal({ onClose }: { onClose: () => void }) {
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function generate() {
+    setCreating(true);
+    setError(null);
+    try {
+      const req: ReviewRequest = await adminCreateReviewRequest({
+        customer_name: customerName.trim() || undefined,
+        customer_email: customerEmail.trim() || undefined,
+        note: note.trim() || undefined,
+      });
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      setLink(`${origin}/review/${req.token}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not generate link");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function copy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard may be unavailable */
+    }
+  }
+
+  const inputCls =
+    "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 transition-colors";
+  const labelCls = "block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900" style={{ fontSize: 15 }}>Get a review from a customer</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-6 space-y-4">
+          {!link ? (
+            <>
+              <p className="text-sm text-gray-500">
+                Generate a unique, one-time link. Send it to your customer — they can submit
+                <strong> one</strong> review, which lands here for your approval.
+              </p>
+              <div>
+                <label className={labelCls}>Customer name (optional)</label>
+                <input className={inputCls} value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="e.g. Rafiq Islam" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Email (optional)</label>
+                  <input className={inputCls} value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="for your records" />
+                </div>
+                <div>
+                  <label className={labelCls}>Note (optional)</label>
+                  <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Order #1234" />
+                </div>
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <div className="flex justify-end gap-3 pt-1">
+                <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Cancel</button>
+                <button onClick={generate} disabled={creating} className="px-5 py-2 text-sm rounded-lg font-medium text-white" style={{ background: "#111", opacity: creating ? 0.6 : 1 }}>
+                  {creating ? "Generating…" : "Generate link"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#ecfdf3", color: "#15803d", border: "1px solid #bbf7d0" }}>
+                Link created! Share it with your customer.
+              </div>
+              <div className="flex items-center gap-2">
+                <input readOnly value={link} className={inputCls + " font-mono text-xs"} onFocus={(e) => e.target.select()} />
+                <button onClick={copy} className="shrink-0 px-4 py-2 text-sm rounded-lg font-medium text-white" style={{ background: copied ? "#1a7a45" : "#111" }}>
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">This link works once. Generate a new one for each customer.</p>
+              <div className="flex justify-end pt-1">
+                <button onClick={onClose} className="px-5 py-2 text-sm rounded-lg font-medium text-white" style={{ background: "#111" }}>Done</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<ReviewOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<"new" | ReviewOut | null>(null);
+  const [linkModal, setLinkModal] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
 
   const fetchReviews = useCallback(async () => {
     setLoading(true);
@@ -273,6 +381,18 @@ export default function AdminReviewsPage() {
     }
   }
 
+  async function handleApprove(review: ReviewOut) {
+    setApprovingId(review.id);
+    try {
+      const updated = await adminApproveReview(review.id);
+      setReviews((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Approve failed");
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
   async function handleToggleActive(review: ReviewOut) {
     try {
       const updated = await adminUpdateReview(review.id, { is_active: !review.is_active });
@@ -292,16 +412,29 @@ export default function AdminReviewsPage() {
             Manage testimonials shown in the home page carousel
           </p>
         </div>
-        <button
-          onClick={() => setModal("new")}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-80"
-          style={{ background: "#111" }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Review
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLinkModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{ background: "#fff", border: "1px solid #e4e6ea", color: "#111" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" />
+              <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07L13 19" />
+            </svg>
+            Get review from customer
+          </button>
+          <button
+            onClick={() => setModal("new")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-80"
+            style={{ background: "#111" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Review
+          </button>
+        </div>
       </div>
 
       {/* Error */}
@@ -362,24 +495,45 @@ export default function AdminReviewsPage() {
                   </td>
                   <td className={TD + " text-gray-500"}>{r.sort_order}</td>
                   <td className={TD}>
-                    <button
-                      onClick={() => handleToggleActive(r)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
-                      style={
-                        r.is_active
-                          ? { background: "#edfff5", color: "#1a7a45" }
-                          : { background: "#f3f4f6", color: "#6b7280" }
-                      }
-                    >
+                    {!r.is_approved ? (
                       <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ background: r.is_active ? "#1a7a45" : "#9ca3af" }}
-                      />
-                      {r.is_active ? "Active" : "Hidden"}
-                    </button>
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                        style={{ background: "#fff4e5", color: "#c45b00" }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#f2890e" }} />
+                        Pending
+                        {r.source === "customer" && <span className="opacity-60">· customer</span>}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleToggleActive(r)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+                        style={
+                          r.is_active
+                            ? { background: "#edfff5", color: "#1a7a45" }
+                            : { background: "#f3f4f6", color: "#6b7280" }
+                        }
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: r.is_active ? "#1a7a45" : "#9ca3af" }}
+                        />
+                        {r.is_active ? "Active" : "Hidden"}
+                      </button>
+                    )}
                   </td>
                   <td className={TD}>
                     <div className="flex gap-2">
+                      {!r.is_approved && (
+                        <button
+                          onClick={() => handleApprove(r)}
+                          disabled={approvingId === r.id}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors"
+                          style={{ background: "#1a7a45", opacity: approvingId === r.id ? 0.5 : 1 }}
+                        >
+                          {approvingId === r.id ? "…" : "Approve"}
+                        </button>
+                      )}
                       <button
                         onClick={() => setModal(r)}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -411,6 +565,8 @@ export default function AdminReviewsPage() {
           onSaved={handleSaved}
         />
       )}
+
+      {linkModal && <LinkModal onClose={() => setLinkModal(false)} />}
     </div>
   );
 }
