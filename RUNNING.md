@@ -5,7 +5,7 @@ This project has two parts that must **both** be running:
 | Part | Stack | Port | URL |
 |------|-------|------|-----|
 | Backend | FastAPI + async SQLAlchemy + aiosqlite | `8000` | http://localhost:8000 |
-| Frontend | Next.js 14 (App Router) | `3333` | http://localhost:3333 |
+| Frontend | Next.js 14 (App Router) | `3000` | http://localhost:3000 |
 
 The frontend reads the API base from `frontend/.env.local`
 (`NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1`), so start the **backend first**.
@@ -28,7 +28,7 @@ cd frontend
 npm run dev
 ```
 
-Then open **http://localhost:3333**.
+Then open **http://localhost:3000**.
 
 > The backend has **no `--reload`**. After changing backend Python code, stop it
 > (Ctrl+C) and start it again to pick up the changes.
@@ -81,7 +81,7 @@ backend is on port 8000 and `frontend/.env.local` points to
 
 ## Admin login
 
-- URL: http://localhost:3333/login
+- URL: http://localhost:3000/login
 - Email: `admin@prototypebd.com`
 - Password: `Admin@12345`  (super admin — all permissions)
 
@@ -115,7 +115,7 @@ ones. New columns on existing tables are added via `_ensure_*_columns()` helpers
 COLUMN` there when you add a column to an existing model.
 
 ### 3. Ports already in use
-If `8000` or `3333` is taken (or a previous run is stuck), kill stragglers:
+If `8000` or `3000` is taken (or a previous run is stuck), kill stragglers:
 
 PowerShell:
 ```powershell

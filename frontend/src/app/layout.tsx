@@ -17,10 +17,18 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+// Tolerate a malformed NEXT_PUBLIC_SITE_URL (e.g. "http://:5555" when
+// SERVER_HOST is unset at build time) instead of crashing the build.
+function safeSiteUrl(): URL {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://prototypebd.com");
+  } catch {
+    return new URL("https://prototypebd.com");
+  }
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://prototypebd.com"
-  ),
+  metadataBase: safeSiteUrl(),
   title: {
     default: "PrototypeBD — 3D Printers, Laser Engravers & Filament",
     template: "%s | PrototypeBD",
